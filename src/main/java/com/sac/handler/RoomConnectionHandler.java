@@ -60,7 +60,10 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
         String roomId = sessionRoomMap.get(session);
-        broadcastMessage(message.getPayload(), roomId);
+        for (WebSocketSession socketSession : roomConnectionService.getSessions(roomId)) {
+            if (socketSession.isOpen() && !socketSession.equals(session))
+                socketSession.sendMessage(message);
+        }
     }
 
     public void sendErrorAndClose(WebSocketSession session, String msg) throws Exception {
