@@ -1,7 +1,11 @@
 package com.sac.handler;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sac.factory.MessageHandlerFactory;
+import com.sac.model.Message;
+import com.sac.service.MessageService;
 import com.sac.service.RoomConnectionService;
-import com.sac.util.SocketSessionUtil;
+import com.sac.strategy.message.MessageHandlerStrategy;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,9 +15,11 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.sac.util.SocketSessionUtil.getQueryParamValue;
+import static com.sac.util.SocketSessionUtil.sendErrorAndClose;
 
 @Slf4j
 @Component
@@ -21,11 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RoomConnectionHandler extends TextWebSocketHandler {
 
     private final RoomConnectionService roomConnectionService;
+    private final MessageService messageService;
+    private final MessageHandlerFactory messageHandlerFactory;
+    private final AtomicBoolean shutdownStatus = new AtomicBoolean(false);
     private final ConcurrentHashMap<WebSocketSession, String> sessionRoomMap = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
-        String roomId = SocketSessionUtil.getQueryParamValue(session, "roomId");
+        String roomId = getQueryParamValue(session, "roomId");
         if (roomId == null || roomId.isEmpty()) {
             log.info("Invalid room Id");
             sendErrorAndClose(session, "Invalid RoomID");
@@ -39,7 +48,7 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
         }
         String message = "Player joined";
         sessionRoomMap.put(session, roomId);
-        broadcastMessage(message, roomId);
+        messageService.broadcastMessage(message, roomId);
     }
 
     @Override
@@ -48,36 +57,39 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
         if (roomId != null) {
             boolean isLeft = roomConnectionService.tryRemove(roomId, session);
             if (!isLeft) {
-                log.warn("Potential memory leak, Failed to remove close connection");
+                log.warn("Potential memory leak, Failed to remove closed connection");
                 return;
             }
-            sessionRoomMap.remove(session);
-            String message = "Player left";
-            broadcastMessage(message, roomId);
+            if (!checkShutDownStatus(status)) {
+                sessionRoomMap.remove(session);
+                String message = "Player left";
+                messageService.broadcastMessage(message, roomId);
+            }
         }
     }
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
         String roomId = sessionRoomMap.get(session);
-        for (WebSocketSession socketSession : roomConnectionService.getSessions(roomId)) {
-            if (socketSession.isOpen() && !socketSession.equals(session))
-                socketSession.sendMessage(message);
-        }
+        Message parsedMessage = new ObjectMapper().readValue(message.asBytes(), Message.class);
+        MessageHandlerStrategy handlerStrategy = messageHandlerFactory.getInstance(parsedMessage.getType());
+        handlerStrategy.handle(session, parsedMessage, roomId);
     }
 
-    public void sendErrorAndClose(WebSocketSession session, String msg) throws Exception {
-        if (session.isOpen()) {
-            session.sendMessage(new TextMessage(msg));
-            session.close(CloseStatus.POLICY_VIOLATION);
-        }
+    @Override
+    public void handleTransportError(@NonNull WebSocketSession session, Throwable exception) throws Exception {
+        String message = exception.getMessage();
+        log.warn("Server stopped: {}", message);
     }
 
-    public void broadcastMessage(String message, String roomId) throws IOException {
-        Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
-        for (WebSocketSession session : sessions) {
-            if (session.isOpen())
-                session.sendMessage(new TextMessage(message));
-        }
+
+    private boolean checkShutDownStatus(@NonNull CloseStatus status) {
+        shutdownStatus.set(
+                status == CloseStatus.GOING_AWAY ||
+                status == CloseStatus.SERVICE_RESTARTED ||
+                status == CloseStatus.SERVER_ERROR
+        );
+        log.warn("Server is going down...");
+        return shutdownStatus.get();
     }
 }

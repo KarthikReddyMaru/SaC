@@ -40,4 +40,8 @@ public class RoomConnectionService {
         return rooms.getOrDefault(roomId, Collections.emptySet());
     }
 
+    public int getRoomSize(String roomId) {
+        return rooms.getOrDefault(roomId, Collections.emptySet()).size();
+    }
+
 }

@@ -1,5 +1,7 @@
 package com.sac.util;
 
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Objects;
@@ -19,4 +21,10 @@ public class SocketSessionUtil {
         return null;
     }
 
+    public static void sendErrorAndClose(WebSocketSession session, String msg) throws Exception {
+        if (session.isOpen()) {
+            session.sendMessage(new TextMessage(msg));
+            session.close(CloseStatus.POLICY_VIOLATION);
+        }
+    }
 }
