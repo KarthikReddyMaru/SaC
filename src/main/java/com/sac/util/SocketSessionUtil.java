@@ -27,4 +27,14 @@ public class SocketSessionUtil {
             session.close(CloseStatus.POLICY_VIOLATION);
         }
     }
+
+    public static String setUserNameInSession(WebSocketSession webSocketSession) {
+        String username = getQueryParamValue(webSocketSession, "username");
+        webSocketSession.getAttributes().put("username", username);
+        return username;
+    }
+
+    public static String getUserNameFromSession(WebSocketSession webSocketSession) {
+        return webSocketSession.getAttributes().get("username").toString();
+    }
 }

@@ -6,6 +6,7 @@ import com.sac.model.Message;
 import com.sac.service.MessageService;
 import com.sac.service.RoomConnectionService;
 import com.sac.strategy.message.MessageHandlerStrategy;
+import com.sac.util.SocketSessionUtil;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +18,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static com.sac.util.SocketSessionUtil.getQueryParamValue;
-import static com.sac.util.SocketSessionUtil.sendErrorAndClose;
 
 @Slf4j
 @Component
@@ -34,19 +32,20 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
-        String roomId = getQueryParamValue(session, "roomId");
+        String roomId = SocketSessionUtil.getQueryParamValue(session, "roomId");
         if (roomId == null || roomId.isEmpty()) {
             log.info("Invalid room Id");
-            sendErrorAndClose(session, "Invalid RoomID");
+            SocketSessionUtil.sendErrorAndClose(session, "Invalid RoomID");
             return;
         }
         boolean isJoined = roomConnectionService.tryJoin(roomId, session);
         if (!isJoined) {
             log.info("Room is full");
-            sendErrorAndClose(session, "Room is full");
+            SocketSessionUtil.sendErrorAndClose(session, "Room is full");
             return;
         }
-        String message = "Player joined";
+        String username = SocketSessionUtil.setUserNameInSession(session);
+        String message = String.format("%s is joined", username);
         sessionRoomMap.put(session, roomId);
         messageService.broadcastMessage(message, roomId);
     }
@@ -62,7 +61,8 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
             }
             if (!checkShutDownStatus(status)) {
                 sessionRoomMap.remove(session);
-                String message = "Player left";
+                String username = SocketSessionUtil.getUserNameFromSession(session);
+                String message = String.format("%s left", username);
                 messageService.broadcastMessage(message, roomId);
             }
         }
@@ -89,7 +89,8 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
                 status == CloseStatus.SERVICE_RESTARTED ||
                 status == CloseStatus.SERVER_ERROR
         );
-        log.warn("Server is going down...");
+        if (shutdownStatus.get())
+            log.warn(status.getReason());
         return shutdownStatus.get();
     }
 }
