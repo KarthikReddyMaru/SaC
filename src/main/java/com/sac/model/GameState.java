@@ -11,7 +11,7 @@ import java.util.List;
 public class GameState {
 
     private String roomId;
-    private String[][] board;
+    private Position[][] board;
     private List<WebSocketSession> players;
     private int playerCount;
     private Status status;

@@ -1,6 +1,7 @@
 package com.sac.service;
 
 import com.sac.model.GameState;
+import com.sac.model.Position;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class GameStateService {
             GameState gameState = GameState
                     .builder()
                     .roomId(roomId)
-                    .board(new String[12][2])
+                    .board(new Position[6][2])
                     .players(sessions)
                     .status(GameState.Status.PLAYING)
                     .playerCount(sessions.size())

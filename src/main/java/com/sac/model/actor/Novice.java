@@ -45,4 +45,11 @@ public class Novice implements Actor {
     public int coolDownLeft() {
         return cooldown.get();
     }
+
+    @Override
+    public Actor clone() {
+        Actor novice = new Novice();
+        novice.setCoolDown(this.coolDownLeft());
+        return novice;
+    }
 }

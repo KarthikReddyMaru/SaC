@@ -11,4 +11,5 @@ public interface Actor {
     Actor evolve(Specialization specialization) throws IllegalStateException;
     Set<Specialization> getAllowedTransitions();
     Specialization getCurrentState();
+    Actor clone();
 }
