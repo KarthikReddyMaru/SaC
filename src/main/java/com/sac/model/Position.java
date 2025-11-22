@@ -18,16 +18,14 @@ public class Position {
 
     public void setActor(Actor actor) {
         if (!this.isCapturedByOpponent) {
-            Actor clonedActor = this.actor == null ? null : this.actor.clone();
-            positionCareTaker.saveMemento(new PositionMemento(clonedActor, this.belongsTo, this.isCapturedByOpponent));
+            positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, false));
             this.actor = actor;
         }
     }
 
-    public void updatePositionOwnership(String belongsTo, boolean isCapturedByOpponent) {
+    public void capturePosition(String belongsTo, boolean isCapturedByOpponent) {
         if (isCapturedByOpponent) {
-            Actor clonedActor = this.actor == null ? null : this.actor.clone();
-            positionCareTaker.saveMemento(new PositionMemento(clonedActor, this.belongsTo, this.isCapturedByOpponent));
+            positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, this.isCapturedByOpponent));
             this.actor = null;
             this.belongsTo = belongsTo;
             this.isCapturedByOpponent = true;

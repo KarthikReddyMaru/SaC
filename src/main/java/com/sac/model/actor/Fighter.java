@@ -3,19 +3,11 @@ package com.sac.model.actor;
 import com.sac.config.actor.ActorActionConfig;
 import com.sac.config.actor.ActorEvolutionConfig;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.Set;
 
-@Slf4j
 @SuperBuilder(toBuilder = true)
-public class Novice extends Actor {
-
-
-    @Override
-    public Specialization getCurrentState() {
-        return Specialization.NOVICE;
-    }
+public class Fighter extends Actor {
 
     @Override
     public Set<Specialization> getAllowedTransitions() {
@@ -25,6 +17,11 @@ public class Novice extends Actor {
     @Override
     public Set<Action> getAllowedActions() {
         return ActorActionConfig.getAllowedActions(getCurrentState());
+    }
+
+    @Override
+    public Specialization getCurrentState() {
+        return Specialization.FIGHTER;
     }
 
     @Override
@@ -38,7 +35,7 @@ public class Novice extends Actor {
     public Actor withDecrementedCoolDown() {
         if (cooldown > 0)
             return this.toBuilder()
-                .cooldown(cooldown - 1).build();
+                    .cooldown(cooldown - 1).build();
         return this;
     }
 

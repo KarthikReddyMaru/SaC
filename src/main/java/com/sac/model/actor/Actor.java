@@ -1,15 +1,27 @@
 package com.sac.model.actor;
 
+import lombok.Builder;
+import lombok.experimental.SuperBuilder;
+
 import java.util.Set;
 
-public interface Actor {
+@SuperBuilder
+public abstract class Actor {
 
-    void setCoolDown(int coolDownSteps);
-    void decrementCoolDown();
-    boolean canPerformAction();
-    int coolDownLeft();
-    Actor evolve(Specialization specialization) throws IllegalStateException;
-    Set<Specialization> getAllowedTransitions();
-    Specialization getCurrentState();
-    Actor clone();
+    @Builder.Default
+    protected final int cooldown = 0;
+
+    boolean canPerformAction() {
+        return cooldown == 0;
+    }
+
+    public int coolDownLeft() {
+        return cooldown;
+    }
+
+    abstract Actor withCoolDown(int coolDownSteps);
+    abstract Actor withDecrementedCoolDown();
+    abstract Set<Specialization> getAllowedTransitions();
+    abstract Set<Action> getAllowedActions();
+    abstract Specialization getCurrentState();
 }
