@@ -1,11 +1,13 @@
 package com.sac.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Objects;
 
+@Slf4j
 public class SocketSessionUtil {
 
     public static String getQueryParamValue(WebSocketSession webSocketSession, String target) {
@@ -25,6 +27,7 @@ public class SocketSessionUtil {
         if (session.isOpen()) {
             session.sendMessage(new TextMessage(msg));
             session.close(CloseStatus.POLICY_VIOLATION);
+            log.info("{}'s session closed due to {}", session.getAttributes().get("username"), msg);
         }
     }
 

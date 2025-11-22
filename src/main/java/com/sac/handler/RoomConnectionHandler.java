@@ -27,6 +27,7 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     private final RoomConnectionService roomConnectionService;
     private final MessageService messageService;
     private final MessageHandlerFactory messageHandlerFactory;
+
     private final AtomicBoolean shutdownStatus = new AtomicBoolean(false);
     private final ConcurrentHashMap<WebSocketSession, String> sessionRoomMap = new ConcurrentHashMap<>();
 
@@ -34,13 +35,11 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
         String roomId = SocketSessionUtil.getQueryParamValue(session, "roomId");
         if (roomId == null || roomId.isEmpty()) {
-            log.info("Invalid room Id");
             SocketSessionUtil.sendErrorAndClose(session, "Invalid RoomID");
             return;
         }
         boolean isJoined = roomConnectionService.tryJoin(roomId, session);
         if (!isJoined) {
-            log.info("Room is full");
             SocketSessionUtil.sendErrorAndClose(session, "Room is full");
             return;
         }
@@ -81,7 +80,6 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
         String message = exception.getMessage();
         log.warn("Server stopped: {}", message);
     }
-
 
     private boolean checkShutDownStatus(@NonNull CloseStatus status) {
         shutdownStatus.set(
