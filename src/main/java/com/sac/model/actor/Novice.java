@@ -1,6 +1,6 @@
 package com.sac.model.actor;
 
-import com.sac.config.actor.ActorEvolutionConfig;
+import com.sac.config.actor.ActorConfig;
 import com.sac.factory.ActorEvolutionFactory;
 
 import java.util.Set;
@@ -17,7 +17,7 @@ public class Novice implements Actor {
 
     @Override
     public Set<Specialization> getAllowedTransitions() {
-        return ActorEvolutionConfig.getEvolutions(getCurrentState());
+        return ActorConfig.getEvolutions(getCurrentState());
     }
 
     @Override
