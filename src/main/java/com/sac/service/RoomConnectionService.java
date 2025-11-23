@@ -44,4 +44,6 @@ public class RoomConnectionService {
         return rooms.getOrDefault(roomId, Collections.emptySet()).size();
     }
 
+    public boolean isFull(String roomId) { return getRoomSize(roomId) == maxRoomSize; }
+
 }

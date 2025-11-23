@@ -17,7 +17,7 @@ public class GameStateService {
 
     private final ConcurrentHashMap<String, GameState> gameStates = new ConcurrentHashMap<>();
 
-    public GameState initializeGameState(String roomId, List<WebSocketSession> sessions) {
+    public void initializeGameState(String roomId, List<WebSocketSession> sessions) {
         if (!gameStates.containsKey(roomId)) {
             GameState gameState = GameState
                     .builder()
@@ -31,7 +31,6 @@ public class GameStateService {
                     .build();
             gameStates.put(roomId, gameState);
         }
-        return gameStates.get(roomId);
     }
 
     public GameState getGameState(String roomId) {
@@ -49,5 +48,9 @@ public class GameStateService {
     public void endGameState(String roomId) {
         // TODO - Return winner
         gameStates.remove(roomId);
+    }
+
+    public boolean exists(String roomId) {
+        return gameStates.containsKey(roomId);
     }
 }
