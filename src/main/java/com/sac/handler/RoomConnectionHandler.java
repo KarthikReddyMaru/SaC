@@ -1,11 +1,11 @@
 package com.sac.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sac.factory.MessageHandlerFactory;
-import com.sac.model.Message;
+import com.sac.factory.EnvelopeHandler;
+import com.sac.factory.EnvelopeHandlerRegistry;
+import com.sac.model.message.MessageEnvelope;
 import com.sac.service.MessageService;
 import com.sac.service.RoomConnectionService;
-import com.sac.strategy.message.MessageHandlerStrategy;
 import com.sac.util.SocketSessionUtil;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
 
     private final RoomConnectionService roomConnectionService;
     private final MessageService messageService;
-    private final MessageHandlerFactory messageHandlerFactory;
+    private final EnvelopeHandlerRegistry envelopeHandlerRegistry;
 
     private final AtomicBoolean shutdownStatus = new AtomicBoolean(false);
     private final ConcurrentHashMap<WebSocketSession, String> sessionRoomMap = new ConcurrentHashMap<>();
@@ -44,9 +44,8 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
             return;
         }
         String username = SocketSessionUtil.setUserNameInSession(session);
-        String message = String.format("%s is joined", username);
         sessionRoomMap.put(session, roomId);
-        messageService.broadcastMessage(message, roomId);
+        messageService.broadcastMessage(String.format("%s is joined", username), roomId);
     }
 
     @Override
@@ -68,11 +67,11 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
-        String roomId = sessionRoomMap.get(session);
-        Message parsedMessage = new ObjectMapper().readValue(message.asBytes(), Message.class);
-        MessageHandlerStrategy handlerStrategy = messageHandlerFactory.getInstance(parsedMessage.getType());
-        handlerStrategy.handle(session, parsedMessage, roomId);
+    protected void handleTextMessage(@NonNull WebSocketSession webSocketSession, @NonNull TextMessage message) throws Exception {
+        String roomId = sessionRoomMap.get(webSocketSession);
+        MessageEnvelope messageEnvelope = new ObjectMapper().readValue(message.asBytes(), MessageEnvelope.class);
+        EnvelopeHandler envelopeHandler = envelopeHandlerRegistry.getInstance(messageEnvelope.getType());
+        envelopeHandler.handle(webSocketSession, messageEnvelope, roomId);
     }
 
     @Override

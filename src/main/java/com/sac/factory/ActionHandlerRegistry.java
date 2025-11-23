@@ -1,6 +1,6 @@
 package com.sac.factory;
 
-import com.sac.model.actor.Action;
+import com.sac.strategy.action.Action;
 import com.sac.model.actor.GameAction;
 import org.springframework.stereotype.Component;
 
@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public final class ActionHandlerFactory {
+public final class ActionHandlerRegistry {
 
     private final Map<GameAction, Action> actionMap = new HashMap<>();
 
-    public ActionHandlerFactory(List<Action> actions) {
+    public ActionHandlerRegistry(List<Action> actions) {
         for (Action action : actions) {
             actionMap.put(action.getActionType(), action);
         }

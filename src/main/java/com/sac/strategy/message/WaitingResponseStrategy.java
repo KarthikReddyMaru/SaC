@@ -1,6 +1,7 @@
 package com.sac.strategy.message;
 
-import com.sac.model.Message;
+import com.sac.model.message.DefaultMessage;
+import com.sac.model.message.DefaultMessage.Type;
 import com.sac.service.MessageService;
 import com.sac.service.RoomConnectionService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class WaitingResponseStrategy implements MessageHandlerStrategy {
     private final ConcurrentHashMap<String, HashMap<WebSocketSession, String>> receivedResponsesMap = new ConcurrentHashMap<>();
 
     @Override
-    public void handle(WebSocketSession webSocketSession, Message message, String roomId) throws IOException {
+    public void handle(WebSocketSession webSocketSession, DefaultMessage message, String roomId) throws IOException {
         // Check roomId before calling this
         receivedResponsesMap.computeIfAbsent(roomId, (room) -> new HashMap<>());
         HashMap<WebSocketSession, String> receivedResponses = receivedResponsesMap.get(roomId);
@@ -36,8 +37,8 @@ public class WaitingResponseStrategy implements MessageHandlerStrategy {
     }
 
     @Override
-    public Message.Type getStrategy() {
-        return Message.Type.WAITING_FOR_RESPONSE;
+    public Type getStrategy() {
+        return Type.WAITING_FOR_RESPONSE;
     }
 
     private boolean areAllResponsesReceived(String roomId) {

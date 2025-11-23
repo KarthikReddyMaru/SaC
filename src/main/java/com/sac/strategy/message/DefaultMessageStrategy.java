@@ -1,6 +1,7 @@
 package com.sac.strategy.message;
 
-import com.sac.model.Message;
+import com.sac.model.message.DefaultMessage;
+import com.sac.model.message.DefaultMessage.Type;
 import com.sac.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -15,12 +16,12 @@ public class DefaultMessageStrategy implements MessageHandlerStrategy {
     private final MessageService messageService;
 
     @Override
-    public void handle(WebSocketSession webSocketSession, Message message, String roomId) throws IOException {
+    public void handle(WebSocketSession webSocketSession, DefaultMessage message, String roomId) throws IOException {
         messageService.sendMessage(webSocketSession, message, roomId);
     }
 
     @Override
-    public Message.Type getStrategy() {
-        return Message.Type.MESSAGE;
+    public Type getStrategy() {
+        return Type.CHAT;
     }
 }

@@ -1,4 +1,4 @@
-package com.sac.model;
+package com.sac.model.message;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,13 +9,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Message {
+public class DefaultMessage {
 
-    private Type type;
     private String content;
+    private Type type;
 
     public enum Type {
-        WAITING_FOR_RESPONSE, MESSAGE
+        CHAT, WAITING_FOR_RESPONSE
     }
-
 }

@@ -1,6 +1,6 @@
 package com.sac.config.actor;
 
-import com.sac.model.actor.Action;
+import com.sac.strategy.action.Action;
 import com.sac.model.actor.GameAction;
 import com.sac.model.actor.Specialization;
 

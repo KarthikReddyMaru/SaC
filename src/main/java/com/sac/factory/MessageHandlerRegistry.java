@@ -1,6 +1,6 @@
 package com.sac.factory;
 
-import com.sac.model.Message.Type;
+import com.sac.model.message.DefaultMessage.Type;
 import com.sac.strategy.message.MessageHandlerStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -10,11 +10,11 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class MessageHandlerFactory {
+public class MessageHandlerRegistry {
 
     private final HashMap<Type, MessageHandlerStrategy> strategyMap;
 
-    public MessageHandlerFactory(List<MessageHandlerStrategy> strategies) {
+    public MessageHandlerRegistry(List<MessageHandlerStrategy> strategies) {
         strategyMap = new HashMap<>();
         for (MessageHandlerStrategy strategy : strategies) {
             Type type = strategy.getStrategy();

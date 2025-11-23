@@ -2,6 +2,7 @@ package com.sac.model.actor;
 
 import com.sac.config.actor.ActorActionConfig;
 import com.sac.config.actor.ActorEvolutionConfig;
+import com.sac.strategy.action.Action;
 import lombok.experimental.SuperBuilder;
 
 import java.util.Set;

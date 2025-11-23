@@ -1,10 +1,9 @@
 package com.sac.strategy.action;
 
-import com.sac.model.Position;
-import com.sac.model.actor.Action;
 import com.sac.model.actor.GameAction;
-import com.sac.util.exception.IllegalMoveException;
+import com.sac.model.message.ActionContext;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketSession;
 
 @Component
 public class AttackAndCapture implements Action {
@@ -15,10 +14,7 @@ public class AttackAndCapture implements Action {
     }
 
     @Override
-    public void performAction(Position sourcePosition, Position targetPosition) {
-        if (sourcePosition.getBelongsTo().equals(targetPosition.getBelongsTo()))
-            throw new IllegalMoveException("Invalid position to capture");
-        String user = sourcePosition.getBelongsTo();
-        targetPosition.capturePosition(user, true);
+    public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
+
     }
 }

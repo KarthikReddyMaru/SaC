@@ -1,11 +1,12 @@
 package com.sac.model.actor;
 
+import com.sac.strategy.action.Action;
 import lombok.Builder;
 import lombok.experimental.SuperBuilder;
 
 import java.util.Set;
 
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 public abstract class Actor {
 
     @Builder.Default

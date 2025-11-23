@@ -3,6 +3,7 @@ package com.sac.model.actor;
 import java.util.Arrays;
 
 public enum GameAction {
+    SPAWN,
     EVOLVE,
     ATTACK_AND_CAPTURE,
     TELEPORT,

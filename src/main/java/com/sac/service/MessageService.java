@@ -1,7 +1,7 @@
 package com.sac.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sac.model.Message;
+import com.sac.model.message.DefaultMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
@@ -17,7 +17,7 @@ public class MessageService {
     private final RoomConnectionService roomConnectionService;
     private final ObjectMapper objectMapper;
 
-    public void broadcastMessage(Message message, String roomId) throws IOException {
+    public void broadcastMessage(DefaultMessage message, String roomId) throws IOException {
         String objToJson = objectMapper.writeValueAsString(message);
         broadcastMessage(objToJson, roomId);
     }
@@ -30,7 +30,7 @@ public class MessageService {
         }
     }
 
-    public void sendMessage(WebSocketSession webSocketSession, Message message, String roomId) throws IOException {
+    public void sendMessage(WebSocketSession webSocketSession, DefaultMessage message, String roomId) throws IOException {
         String objToJson = objectMapper.writeValueAsString(message);
         sendMessage(webSocketSession, objToJson, roomId);
     }
