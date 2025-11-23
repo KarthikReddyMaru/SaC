@@ -1,24 +1,33 @@
 package com.sac.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.util.List;
 
-@Builder
 @Data
+@Builder(toBuilder = true)
 public class GameState {
 
     private String roomId;
-    private Position[][] board;
-    private List<WebSocketSession> players;
+    private List<Player> players;
     private int playerCount;
+    private String currentPlayerId;
+    private boolean actionPending;
+    private int actionPendingOn;
     private Status status;
     private int totalMovesPlayed;
     private int totalAvailableMoves;
 
     public enum Status {
         PLAYING, FINISHED
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class Player {
+        private Position[] positions;
+        private String username;
     }
 }

@@ -1,12 +1,14 @@
 package com.sac.model;
 
 import com.sac.model.actor.Actor;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 @Getter
+@Builder(toBuilder = true)
 public class Position {
 
     private int positionId;

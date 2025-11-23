@@ -18,41 +18,39 @@ public class GameplayService {
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
-    public String tryJoin(WebSocketSession session) throws Exception {
-        String roomId = SocketSessionUtil.getQueryParamValue(session, "roomId");
+    public String tryJoin(WebSocketSession webSocketSession) throws Exception {
+        String roomId = SocketSessionUtil.getQueryParamValue(webSocketSession, "roomId");
         if (roomId == null || roomId.isEmpty()) {
-            SocketSessionUtil.sendErrorAndClose(session, "Invalid RoomID");
+            SocketSessionUtil.sendErrorAndClose(webSocketSession, "Invalid RoomID");
+            throw new IllegalArgumentException();
         }
-        boolean isJoined = roomConnectionService.tryJoin(roomId, session);
+        boolean isJoined = roomConnectionService.tryJoin(roomId, webSocketSession);
         if (!isJoined) {
-            SocketSessionUtil.sendErrorAndClose(session, "Room is full");
+            SocketSessionUtil.sendErrorAndClose(webSocketSession, "Room is full");
+            throw new IllegalArgumentException();
         }
-        String username = SocketSessionUtil.setUserNameInSession(session);
+        String username = SocketSessionUtil.setUserInSession(webSocketSession);
         messageService.broadcastMessage(String.format("%s is joined", username), roomId);
         tryInitializeGame(roomId);
         return roomId;
     }
 
-    public boolean tryLeave(WebSocketSession session, String roomId) throws IOException {
-        boolean isLeft = roomConnectionService.tryRemove(roomId, session);
-        if (!isLeft) {
-            log.warn("Potential memory leak, Failed to remove closed connection");
-        }
-        String username = SocketSessionUtil.getUserNameFromSession(session);
-        String message = String.format("%s left", username);
-        messageService.broadcastMessage(message, roomId);
-        cleanUpGame(roomId);
-        return true;
+    public void tryLeave(WebSocketSession webSocketSession, String roomId) throws Exception {
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        log.info("{} arrived for removal, GameState - {}", username, gameStateService.exists(roomId));
+        if (roomConnectionService.tryRemove(roomId, username))
+            gameStateService.endGameState(roomId);
+        log.info("{} left, GameState - {}", username, gameStateService.exists(roomId));
     }
 
     private void tryInitializeGame(String roomId) throws IOException {
         if (roomConnectionService.isFull(roomId) && !gameStateService.exists(roomId)) {
-            gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getSessions(roomId)));
+            gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)));
             messageService.broadcastMessage("Welcome to Shoot and Capture", roomId);
+            messageService.broadcastMessage(
+                    String.format("%s gets to pick a number now",
+                            gameStateService.getGameState(roomId).getCurrentPlayerId()),
+                    roomId);
         }
-    }
-
-    private void cleanUpGame(String roomId) {
-        gameStateService.endGameState(roomId);
     }
 }

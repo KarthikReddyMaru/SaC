@@ -1,7 +1,7 @@
 package com.sac.config.actor;
 
 import com.sac.strategy.action.Action;
-import com.sac.model.actor.GameAction;
+import com.sac.strategy.action.GameAction;
 import com.sac.model.actor.Specialization;
 
 import java.util.Collections;

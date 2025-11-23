@@ -8,6 +8,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -17,22 +18,12 @@ public class MessageService {
     private final RoomConnectionService roomConnectionService;
     private final ObjectMapper objectMapper;
 
-    public void broadcastMessage(DefaultMessage message, String roomId) throws IOException {
-        String objToJson = objectMapper.writeValueAsString(message);
-        broadcastMessage(objToJson, roomId);
-    }
-
     public void broadcastMessage(String message, String roomId) throws IOException {
         Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
         for (WebSocketSession session : sessions) {
             if (session.isOpen())
                 session.sendMessage(new TextMessage(message));
         }
-    }
-
-    public void sendMessage(WebSocketSession webSocketSession, DefaultMessage message, String roomId) throws IOException {
-        String objToJson = objectMapper.writeValueAsString(message);
-        sendMessage(webSocketSession, objToJson, roomId);
     }
 
     public void sendMessage(WebSocketSession senderSession, String message, String roomId) throws IOException {
@@ -43,9 +34,11 @@ public class MessageService {
         }
     }
 
-    public void sendToSender(WebSocketSession session, String message) throws IOException {
-        if (session.isOpen())
-            session.sendMessage(new TextMessage(message));
+    public void sendToSender(WebSocketSession session, String message) {
+        if (session.isOpen()) {
+            try { session.sendMessage(new TextMessage(message)); }
+            catch (IOException e) { throw new RuntimeException(e); }
+        }
     }
 
 }

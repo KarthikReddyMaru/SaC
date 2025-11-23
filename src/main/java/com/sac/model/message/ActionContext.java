@@ -1,6 +1,6 @@
 package com.sac.model.message;
 
-import com.sac.model.actor.GameAction;
+import com.sac.strategy.action.GameAction;
 import com.sac.model.actor.Specialization;
 import lombok.Data;
 

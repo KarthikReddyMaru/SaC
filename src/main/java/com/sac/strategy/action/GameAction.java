@@ -1,4 +1,4 @@
-package com.sac.model.actor;
+package com.sac.strategy.action;
 
 import java.util.Arrays;
 

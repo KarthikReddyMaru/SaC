@@ -6,6 +6,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Objects;
+import java.util.UUID;
 
 @Slf4j
 public class SocketSessionUtil {
@@ -31,13 +32,14 @@ public class SocketSessionUtil {
         }
     }
 
-    public static String setUserNameInSession(WebSocketSession webSocketSession) {
-        String username = getQueryParamValue(webSocketSession, "username");
+    public static String setUserInSession(WebSocketSession webSocketSession) {
+        String username = getUserNameFromSession(webSocketSession);
         webSocketSession.getAttributes().put("username", username);
         return username;
     }
 
     public static String getUserNameFromSession(WebSocketSession webSocketSession) {
-        return webSocketSession.getAttributes().get("username").toString();
+        String username = getQueryParamValue(webSocketSession, "username");
+        return username != null ? username : UUID.randomUUID().toString().substring(8);
     }
 }

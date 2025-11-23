@@ -1,7 +1,7 @@
 package com.sac.factory;
 
 import com.sac.strategy.action.Action;
-import com.sac.model.actor.GameAction;
+import com.sac.strategy.action.GameAction;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

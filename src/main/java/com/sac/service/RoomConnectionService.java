@@ -1,42 +1,77 @@
 package com.sac.service;
 
+import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RoomConnectionService {
 
-    private final ConcurrentHashMap<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> rooms = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> userRegistry = new ConcurrentHashMap<>();
 
     @Value("${room.size}")
     private int maxRoomSize;
 
-    public synchronized boolean tryJoin(String roomId, WebSocketSession webSocketSession) {
+    public boolean tryJoin(String roomId, WebSocketSession webSocketSession) throws Exception {
         rooms.computeIfAbsent(roomId, (room) -> Collections.synchronizedSet(new HashSet<>()));
         int currRoomSize = rooms.get(roomId).size();
         if (currRoomSize == maxRoomSize) return false;
-        rooms.get(roomId).add(webSocketSession);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        addUserToRoom(roomId, webSocketSession, username);
         return true;
     }
 
-    public synchronized boolean tryRemove(String roomId, WebSocketSession webSocketSession) {
-        if (!rooms.containsKey(roomId)) return false;
-        rooms.get(roomId).remove(webSocketSession);
-        int currRoomSize = rooms.get(roomId).size();
-        if (currRoomSize == 0)
-            rooms.remove(roomId);
+    private void addUserToRoom(String roomId, WebSocketSession webSocketSession, String username) throws Exception {
+        WebSocketSession existing = userRegistry.putIfAbsent(username, webSocketSession);
+        if (existing != null) {
+            SocketSessionUtil.sendErrorAndClose(webSocketSession, "Username exists!!!");
+            throw new IllegalArgumentException();
+        }
+        rooms.get(roomId).add(username);
+    }
+
+    public boolean tryRemove(String roomId, String username) throws Exception {
+        log.info("{} arrived for removal, rooms - {}, userRegistry - {}", username, rooms, userRegistry);
+        Set<String> players = rooms.get(roomId);
+        if (players == null) return false;
+
+        players.remove(username);
+        userRegistry.remove(username);
+
+        // Close all remaining players' sessions and cleanup
+        for (String player : new ArrayList<>(players)) {
+            WebSocketSession session = userRegistry.remove(player);
+            if (session != null && session.isOpen()) {
+                session.close(CloseStatus.POLICY_VIOLATION);
+            }
+        }
+
+        rooms.remove(roomId);
+        log.info("{} left, rooms - {}, userRegistry - {}", username, rooms, userRegistry);
         return true;
     }
+
 
     public Set<WebSocketSession> getSessions(String roomId) {
+        return rooms.getOrDefault(roomId, Collections.emptySet())
+                .stream()
+                .map(userRegistry::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public Set<String> getPlayers(String roomId) {
         return rooms.getOrDefault(roomId, Collections.emptySet());
     }
 
@@ -45,5 +80,4 @@ public class RoomConnectionService {
     }
 
     public boolean isFull(String roomId) { return getRoomSize(roomId) == maxRoomSize; }
-
 }

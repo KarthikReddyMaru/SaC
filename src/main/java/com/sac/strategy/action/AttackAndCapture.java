@@ -1,6 +1,5 @@
 package com.sac.strategy.action;
 
-import com.sac.model.actor.GameAction;
 import com.sac.model.message.ActionContext;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;

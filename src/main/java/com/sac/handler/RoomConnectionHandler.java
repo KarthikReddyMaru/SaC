@@ -5,6 +5,7 @@ import com.sac.factory.EnvelopeHandler;
 import com.sac.factory.EnvelopeHandlerRegistry;
 import com.sac.model.message.MessageEnvelope;
 import com.sac.service.GameplayService;
+import com.sac.util.SocketSessionUtil;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,25 +25,31 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     private final EnvelopeHandlerRegistry envelopeHandlerRegistry;
     private final GameplayService gameplayService;
 
-    private final ConcurrentHashMap<WebSocketSession, String> sessionRoomMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> sessionRoomMap = new ConcurrentHashMap<>();
 
     @Override
-    public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
-        String roomId = gameplayService.tryJoin(session);
-        sessionRoomMap.put(session, roomId);
+    public void afterConnectionEstablished(@NonNull WebSocketSession webSocketSession) throws Exception {
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String roomId = gameplayService.tryJoin(webSocketSession);
+        sessionRoomMap.put(username, roomId);
     }
 
     @Override
-    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
-        String roomId = sessionRoomMap.get(session);
-        if (roomId != null && gameplayService.tryLeave(session, roomId)) {
-            sessionRoomMap.remove(session);
+    public void afterConnectionClosed(@NonNull WebSocketSession webSocketSession, @NonNull CloseStatus status) throws Exception {
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        log.info("{} arrived for removal, sessionRoomMap - {}", username, sessionRoomMap);
+        String roomId = sessionRoomMap.get(username);
+        if (roomId != null) {
+            sessionRoomMap.remove(username);
+            gameplayService.tryLeave(webSocketSession, roomId);
         }
+        log.info("{} left, sessionRoomMap - {}", username, sessionRoomMap);
     }
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession webSocketSession, @NonNull TextMessage message) throws Exception {
-        String roomId = sessionRoomMap.get(webSocketSession);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String roomId = sessionRoomMap.get(username);
         MessageEnvelope messageEnvelope = new ObjectMapper().readValue(message.asBytes(), MessageEnvelope.class);
         EnvelopeHandler envelopeHandler = envelopeHandlerRegistry.getInstance(messageEnvelope.getType());
         envelopeHandler.handle(webSocketSession, messageEnvelope, roomId);

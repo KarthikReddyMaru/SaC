@@ -17,7 +17,7 @@ public class DefaultMessageStrategy implements MessageHandlerStrategy {
 
     @Override
     public void handle(WebSocketSession webSocketSession, DefaultMessage message, String roomId) throws IOException {
-        messageService.sendMessage(webSocketSession, message, roomId);
+        messageService.sendMessage(webSocketSession, message.getContent(), roomId);
     }
 
     @Override
