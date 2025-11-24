@@ -11,19 +11,21 @@ import com.sac.service.MessageService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-@Component
+import static com.sac.strategy.action.GameAction.EVOLVE;
+
+@Service
 @RequiredArgsConstructor
-public class Spawn implements Action {
+public class Evolve implements Action {
 
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
     @Override
     public GameAction getActionType() {
-        return GameAction.SPAWN;
+        return EVOLVE;
     }
 
     @Override
@@ -31,10 +33,14 @@ public class Spawn implements Action {
         GameState gameState = gameStateService.getGameState(roomId);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
-        if (preProcessChecks(webSocketSession, username, gameState, position)) {
-            Actor actor = ActorFactory.getInstance(Specialization.NOVICE);
-            position.setActor(actor);
-            messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()), roomId);
+        Specialization requestedTransition = actionContext.getSpecialization();
+        if (preProcessChecks(webSocketSession, username, gameState, position, requestedTransition)) {
+            int actionPerformingOn = gameState.getActionPendingOn();
+            Specialization from = position.getActor().getCurrentState();
+            position.setActor(ActorFactory.getInstance(requestedTransition));
+            messageService.broadcastMessage(
+                    MessageFormat.evolveSuccessAction(username, actionPerformingOn, from, requestedTransition),
+                    roomId);
             gameState.setActionPending(false);
             gameState.setActionPendingOn(-1);
             messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
@@ -42,13 +48,24 @@ public class Spawn implements Action {
     }
 
     public boolean preProcessChecks(WebSocketSession webSocketSession, String username,
-                                     GameState gameState, Position position) {
+                                    GameState gameState, Position position, Specialization requestedTransition) {
         if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
-        } else if (position.getActor() != null) {
-            String errorMsg = "An actor already present in this position, choose different action";
-            messageService.sendToSender(webSocketSession, errorMsg);
+        }
+        Actor actor = position.getActor();
+        if (actor == null) {
+            messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE");
+            return false;
+        }
+        else if (actor.isFrozen()) {
+            messageService.sendToSender(webSocketSession, "UNFREEZE actor before EVOLVE");
+            return false;
+        }
+        else if (!actor.getAllowedTransitions().contains(requestedTransition)) {
+            String errorMessage = String.format("%s cannot EVOLVE to %s",
+                    actor.getCurrentState(), requestedTransition);
+            messageService.sendToSender(webSocketSession, errorMessage);
             return false;
         }
         return true;
