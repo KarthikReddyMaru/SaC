@@ -25,6 +25,7 @@ public class GameStateService {
                     .players(initializePlayers(players))
                     .currentPlayerId(players.getFirst())
                     .actionPending(false)
+                    .actionPendingOn(-1)
                     .status(GameState.Status.PLAYING)
                     .playerCount(players.size())
                     .totalMovesPlayed(0)
@@ -85,5 +86,15 @@ public class GameStateService {
                 .findFirst()
                 .orElseThrow(IllegalStateException::new)
                 .getUsername();
+    }
+
+    public Position getPlayerPosition(String roomId, String username, int position) {
+        return gameStates.get(roomId)
+                .getPlayers()
+                .stream()
+                .filter(player -> player.getUsername().equals(username))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new)
+                .getPositions()[position];
     }
 }

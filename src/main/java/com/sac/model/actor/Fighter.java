@@ -26,19 +26,9 @@ public class Fighter extends Actor {
     }
 
     @Override
-    public Actor withCoolDown(int coolDownSteps) {
+    public Actor withFrozen(boolean isFrozon) {
         return this.toBuilder()
-                .cooldown(coolDownSteps)
+                .isFrozen(isFrozen)
                 .build();
     }
-
-    @Override
-    public Actor withDecrementedCoolDown() {
-        if (cooldown > 0)
-            return this.toBuilder()
-                    .cooldown(cooldown - 1).build();
-        return this;
-    }
-
-
 }

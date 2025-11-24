@@ -2,27 +2,22 @@ package com.sac.model.actor;
 
 import com.sac.strategy.action.Action;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 
 import java.util.Set;
 
+@Getter
 @SuperBuilder(toBuilder = true)
 public abstract class Actor {
 
     @Builder.Default
-    protected final int cooldown = 0;
+    protected boolean isFrozen = false;
 
-    boolean canPerformAction() {
-        return cooldown == 0;
-    }
+    public boolean canPerformAction() { return isFrozen; }
 
-    public int coolDownLeft() {
-        return cooldown;
-    }
-
-    abstract Actor withCoolDown(int coolDownSteps);
-    abstract Actor withDecrementedCoolDown();
-    abstract Set<Specialization> getAllowedTransitions();
-    abstract Set<Action> getAllowedActions();
-    abstract Specialization getCurrentState();
+    public abstract Actor withFrozen(boolean isFrozon);
+    public abstract Set<Specialization> getAllowedTransitions();
+    public abstract Set<Action> getAllowedActions();
+    public abstract Specialization getCurrentState();
 }

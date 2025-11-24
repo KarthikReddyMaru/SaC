@@ -12,7 +12,6 @@ import java.util.Set;
 @SuperBuilder(toBuilder = true)
 public class Novice extends Actor {
 
-
     @Override
     public Specialization getCurrentState() {
         return Specialization.NOVICE;
@@ -29,19 +28,9 @@ public class Novice extends Actor {
     }
 
     @Override
-    public Actor withCoolDown(int coolDownSteps) {
+    public Actor withFrozen(boolean isFrozon) {
         return this.toBuilder()
-                .cooldown(coolDownSteps)
+                .isFrozen(isFrozen)
                 .build();
     }
-
-    @Override
-    public Actor withDecrementedCoolDown() {
-        if (cooldown > 0)
-            return this.toBuilder()
-                .cooldown(cooldown - 1).build();
-        return this;
-    }
-
-
 }

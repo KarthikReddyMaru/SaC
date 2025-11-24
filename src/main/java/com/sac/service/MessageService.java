@@ -18,11 +18,13 @@ public class MessageService {
     private final RoomConnectionService roomConnectionService;
     private final ObjectMapper objectMapper;
 
-    public void broadcastMessage(String message, String roomId) throws IOException {
+    public void broadcastMessage(String message, String roomId) {
         Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
         for (WebSocketSession session : sessions) {
-            if (session.isOpen())
-                session.sendMessage(new TextMessage(message));
+            if (session.isOpen()) {
+                try { session.sendMessage(new TextMessage(message)); }
+                catch (IOException e) { throw new RuntimeException(e); }
+            }
         }
     }
 

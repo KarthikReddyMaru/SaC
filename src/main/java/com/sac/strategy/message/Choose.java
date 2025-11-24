@@ -73,12 +73,14 @@ public class Choose implements MessageHandlerStrategy {
         String guessedPlayerId = gameStateService.getOpponentId(roomId, chosenPlayerId);
         int guessedPosition = respondedPlayers.get(guessedPlayerId);
         if (chosenPosition != guessedPosition) {
-            messageService.broadcastMessage(String.format("%s won, time for action", chosenPlayerId), roomId);
             gameStateService.setCurrentPlayerId(roomId, chosenPlayerId);
             gameStateService.setActionPendingOn(roomId, chosenPosition);
+            messageService.broadcastMessage(String.format("%s won, time for action on position %s",
+                    chosenPlayerId, chosenPosition), roomId);
         } else {
-            messageService.broadcastMessage(String.format("%s won, time for action", guessedPlayerId), roomId);
             gameStateService.setCurrentPlayerId(roomId, guessedPlayerId);
+            messageService.broadcastMessage(String.format("%s won, gear up to choose",
+                    guessedPlayerId), roomId);
         }
         respondedPlayers.clear();
     }

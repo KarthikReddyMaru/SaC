@@ -8,6 +8,7 @@ public enum GameAction {
     ATTACK_AND_CAPTURE,
     TELEPORT,
     FREEZE,
+    UNFREEZE,
     RESTORE;
 
     public static GameAction fromString(String gameAction) {

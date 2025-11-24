@@ -1,5 +1,6 @@
 package com.sac.model;
 
+import com.sac.factory.ActorFactory;
 import com.sac.model.actor.Actor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,7 +22,7 @@ public class Position {
     public void setActor(Actor actor) {
         if (!this.isCapturedByOpponent) {
             positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, false));
-            this.actor = actor;
+            this.actor = actor.withFrozen(actor.isFrozen());
         }
     }
 
@@ -34,13 +35,22 @@ public class Position {
         }
     }
 
-    public void restorePosition() {
+    public void buildFrom(Position position) {
+        positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, this.isCapturedByOpponent));
+        this.actor = position.getActor().withFrozen(position.getActor().isFrozen());
+        this.belongsTo = position.getBelongsTo();
+        this.isCapturedByOpponent = position.isCapturedByOpponent;
+    }
+
+    public boolean restorePosition() {
         PositionMemento positionMemento = positionCareTaker.restoreMemento();
         if (positionMemento != null) {
             this.actor = positionMemento.actor();
             this.isCapturedByOpponent = positionMemento.isCapturedByOpponent();
             this.belongsTo = positionMemento.belongsTo();
+            return true;
         }
+        return false;
     }
 
     private record PositionMemento(Actor actor, String belongsTo, boolean isCapturedByOpponent) {}
