@@ -9,22 +9,29 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static com.sac.model.actor.Specialization.FIGHTER;
+import static com.sac.model.actor.Specialization.NOVICE;
+import static com.sac.strategy.action.GameAction.ATTACK_AND_CAPTURE;
+import static com.sac.strategy.action.GameAction.EVOLVE;
+
 public class ActorActionConfig {
 
-    private final static Map<Specialization, Set<Action>> actions = new HashMap<>();
+    private final static Map<Specialization, Set<GameAction>> actions = new HashMap<>();
 
     static {
-        actions.put(Specialization.NOVICE,
-                Collections.emptySet());
+        actions.put(NOVICE,
+                Set.of(EVOLVE));
+        actions.put(FIGHTER,
+                Set.of(ATTACK_AND_CAPTURE));
     }
 
     public static boolean isActionAllowed(Specialization specialization, GameAction gameAction) {
         return actions.getOrDefault(specialization, Collections.emptySet())
                 .stream()
-                .anyMatch(action -> action.getActionType().equals(gameAction));
+                .anyMatch(action -> action.equals(gameAction));
     }
 
-    public static Set<Action> getAllowedActions(Specialization specialization) {
+    public static Set<GameAction> getAllowedActions(Specialization specialization) {
         return actions.getOrDefault(specialization, Collections.emptySet());
     }
 }

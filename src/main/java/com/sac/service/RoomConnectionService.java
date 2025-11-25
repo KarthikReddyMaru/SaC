@@ -1,6 +1,7 @@
 package com.sac.service;
 
 import com.sac.util.SocketSessionUtil;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 public class RoomConnectionService {
 
     private final Map<String, Set<String>> rooms = new ConcurrentHashMap<>();
+    @Getter
     private final Map<String, WebSocketSession> userRegistry = new ConcurrentHashMap<>();
 
     @Value("${room.size}")

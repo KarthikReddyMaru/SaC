@@ -28,9 +28,11 @@ public class Spawn implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-        GameState gameState = gameStateService.getGameState(roomId);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
+        GameState gameState = gameStateService.getGameState(roomId);
+        int playerPositionId = gameState.getActionPendingOn();
+        if (playerPositionId == -1) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
+        Position position = gameStateService.getPlayerPosition(roomId, username, playerPositionId);
         if (preProcessChecks(webSocketSession, username, gameState, position)) {
             Actor actor = ActorFactory.getInstance(Specialization.NOVICE);
             position.setActor(actor);

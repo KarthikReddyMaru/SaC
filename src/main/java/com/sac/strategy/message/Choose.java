@@ -1,11 +1,13 @@
 package com.sac.strategy.message;
 
 import com.sac.model.GameState;
+import com.sac.model.Position;
+import com.sac.model.actor.Actor;
 import com.sac.model.message.DefaultMessage;
 import com.sac.model.message.DefaultMessage.Type;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
-import com.sac.service.RoomConnectionService;
+import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -24,7 +26,6 @@ public class Choose implements MessageHandlerStrategy {
     private final GameStateService gameStateService;
     private final MessageService messageService;
     private final Map<String, Map<String, Integer>> roomsRespondedPlayers = new ConcurrentHashMap<>();
-    private final RoomConnectionService roomConnectionService;
 
     @Override
     public Type getStrategy() {
@@ -77,11 +78,35 @@ public class Choose implements MessageHandlerStrategy {
             gameStateService.setActionPendingOn(roomId, chosenPosition);
             messageService.broadcastMessage(String.format("%s won, time for action on position %s",
                     chosenPlayerId, chosenPosition), roomId);
+            tryValidActionPosition(roomId, chosenPlayerId, chosenPosition, guessedPlayerId);
         } else {
             gameStateService.setCurrentPlayerId(roomId, guessedPlayerId);
             messageService.broadcastMessage(String.format("%s won, gear up to choose",
                     guessedPlayerId), roomId);
         }
         respondedPlayers.clear();
+    }
+
+    public void tryValidActionPosition(String roomId, String username,
+                                                int chosenPosition, String opponentName) {
+        GameState gameState = gameStateService.getGameState(roomId);
+        Position position = gameStateService.getPlayerPosition(roomId, username, chosenPosition);
+        Actor actor = position.getActor();
+        if (actor != null && actor.isFrozen()) {
+            messageService.broadcastMessage(
+                    MessageFormat.frozenTrouble(chosenPosition, actor.getCurrentState()), roomId);
+            changeChooseOwnership(roomId, opponentName, gameState);
+        } else if (position.isCapturedByOpponent()) {
+            messageService.broadcastMessage(
+                    MessageFormat.capturedTrouble(position.getBelongsTo(), position.getPositionId()), roomId);
+            changeChooseOwnership(roomId, opponentName, gameState);
+        }
+    }
+
+    private void changeChooseOwnership(String roomId, String opponentName, GameState gameState) {
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(-1);
+        gameState.setCurrentPlayerId(opponentName);
+        messageService.broadcastMessage(MessageFormat.chooseMessage(opponentName), roomId);
     }
 }

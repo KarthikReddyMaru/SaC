@@ -11,12 +11,13 @@ import com.sac.service.MessageService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
 import static com.sac.strategy.action.GameAction.EVOLVE;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class Evolve implements Action {
 

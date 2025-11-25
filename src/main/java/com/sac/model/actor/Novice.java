@@ -2,7 +2,7 @@ package com.sac.model.actor;
 
 import com.sac.config.actor.ActorActionConfig;
 import com.sac.config.actor.ActorEvolutionConfig;
-import com.sac.strategy.action.Action;
+import com.sac.strategy.action.GameAction;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,7 +23,7 @@ public class Novice extends Actor {
     }
 
     @Override
-    public Set<Action> getAllowedActions() {
+    public Set<GameAction> getAllowedActions() {
         return ActorActionConfig.getAllowedActions(getCurrentState());
     }
 

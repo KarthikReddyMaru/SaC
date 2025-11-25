@@ -26,13 +26,11 @@ public class Position {
         }
     }
 
-    public void capturePosition(String belongsTo, boolean isCapturedByOpponent) {
-        if (isCapturedByOpponent) {
-            positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, this.isCapturedByOpponent));
-            this.actor = null;
-            this.belongsTo = belongsTo;
-            this.isCapturedByOpponent = true;
-        }
+    public void capturePosition(String belongsTo) {
+        positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, this.isCapturedByOpponent));
+        this.actor = null;
+        this.belongsTo = belongsTo;
+        this.isCapturedByOpponent = true;
     }
 
     public void buildFrom(Position position) {
@@ -53,7 +51,8 @@ public class Position {
         return false;
     }
 
-    private record PositionMemento(Actor actor, String belongsTo, boolean isCapturedByOpponent) {}
+    private record PositionMemento(Actor actor, String belongsTo, boolean isCapturedByOpponent) {
+    }
 
     private static class PositionCareTaker {
 
