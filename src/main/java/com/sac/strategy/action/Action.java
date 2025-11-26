@@ -6,4 +6,5 @@ import org.springframework.web.socket.WebSocketSession;
 public interface Action {
     GameAction getActionType();
     void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId);
+    int pointsForSuccessfulAction();
 }

@@ -1,5 +1,6 @@
 package com.sac.service;
 
+import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.GameState.Player;
 import com.sac.model.Position;
@@ -17,7 +18,7 @@ public class GameStateService {
 
     private final ConcurrentHashMap<String, GameState> gameStates = new ConcurrentHashMap<>();
 
-    public void initializeGameState(String roomId, List<String> players) {
+    public void initializeGameState(String roomId, List<String> players, GameMode gameMode) {
         if (!gameStates.containsKey(roomId)) {
             GameState gameState = GameState
                     .builder()
@@ -27,6 +28,7 @@ public class GameStateService {
                     .actionPending(false)
                     .actionPendingOn(-1)
                     .status(GameState.Status.PLAYING)
+                    .gameMode(gameMode)
                     .playerCount(players.size())
                     .totalMovesPlayed(0)
                     .totalAvailableMoves(Integer.MAX_VALUE)
@@ -47,10 +49,9 @@ public class GameStateService {
                                 .isCapturedByOpponent(false)
                                 .build();
                     }
-                    return new Player(positions, username);
+                    return new Player(positions, username, 0);
                 }).toList();
     }
-
 
     public GameState getGameState(String roomId) {
         if (!gameStates.containsKey(roomId))
@@ -96,5 +97,14 @@ public class GameStateService {
                 .findFirst()
                 .orElseThrow(IllegalStateException::new)
                 .getPositions()[position];
+    }
+
+    public Player getPlayer(String roomId, String username) {
+        return gameStates.get(roomId)
+                .getPlayers()
+                .stream()
+                .filter(player -> player.getUsername().equals(username))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
     }
 }

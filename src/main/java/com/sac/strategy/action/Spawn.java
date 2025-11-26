@@ -55,4 +55,9 @@ public class Spawn implements Action {
         }
         return true;
     }
+
+    @Override
+    public int pointsForSuccessfulAction() {
+        return 0;
+    }
 }

@@ -71,4 +71,9 @@ public class Evolve implements Action {
         }
         return true;
     }
+
+    @Override
+    public int pointsForSuccessfulAction() {
+        return 0;
+    }
 }

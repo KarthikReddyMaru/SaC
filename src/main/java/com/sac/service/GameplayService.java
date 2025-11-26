@@ -1,5 +1,6 @@
 package com.sac.service;
 
+import com.sac.model.GameMode;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,8 @@ public class GameplayService {
         }
         String username = SocketSessionUtil.setUserInSession(webSocketSession);
         messageService.broadcastMessage(String.format("%s is joined", username), roomId);
-        tryInitializeGame(roomId);
+        GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
+        tryInitializeGame(roomId, gameMode);
         return roomId;
     }
 
@@ -43,10 +45,10 @@ public class GameplayService {
         log.info("{} left, GameState - {}", username, gameStateService.exists(roomId));
     }
 
-    private void tryInitializeGame(String roomId) throws IOException {
+    private void tryInitializeGame(String roomId, GameMode gameMode) {
         if (roomConnectionService.isFull(roomId) && !gameStateService.exists(roomId)) {
-            gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)));
-            messageService.broadcastMessage("Welcome to Shoot and Capture", roomId);
+            gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)), gameMode);
+            messageService.broadcastMessage("Welcome to Shoot and Capture, Mode - ".concat(gameMode.name()), roomId);
             messageService.broadcastMessage(
                     String.format("%s gets to pick a number now",
                             gameStateService.getGameState(roomId).getCurrentPlayerId()),

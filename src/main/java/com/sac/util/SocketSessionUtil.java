@@ -42,4 +42,8 @@ public class SocketSessionUtil {
         String username = getQueryParamValue(webSocketSession, "username");
         return username != null ? username : UUID.randomUUID().toString().substring(8);
     }
+
+    public static String getGameMode(WebSocketSession webSocketSession) {
+        return getQueryParamValue(webSocketSession, "mode");
+    }
 }

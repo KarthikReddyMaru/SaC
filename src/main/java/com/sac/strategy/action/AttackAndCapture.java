@@ -41,8 +41,9 @@ public class AttackAndCapture implements Action {
         Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
 
         if (preProcessChecks(webSocketSession, playerUserName,
-                gameState, playerPosition)) {
+                gameState, playerPosition, opponentPosition)) {
             opponentPosition.capturePosition(playerUserName);
+            gameStateService.getPlayer(roomId, playerUserName).addPoints(pointsForSuccessfulAction());
             messageService.sendToSender(roomConnectionService.getUserRegistry().get(playerUserName),
                     MessageFormat.capturePosition(playerUserName, opponentUsername, opponentPositionId));
             gameState.setActionPending(false);
@@ -52,7 +53,7 @@ public class AttackAndCapture implements Action {
     }
 
     public boolean preProcessChecks(WebSocketSession webSocketSession, String playerName,
-                                    GameState gameState, Position playerPosition) {
+                                    GameState gameState, Position playerPosition, Position opponentPosition) {
         if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(playerName)) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
@@ -67,6 +68,15 @@ public class AttackAndCapture implements Action {
                     playerActor.getCurrentState(), getActionType()));
             return false;
         }
+        else if (opponentPosition.isCapturedByOpponent()) {
+            messageService.sendToSender(webSocketSession, "This position is already captured, try another position");
+            return false;
+        }
         return true;
+    }
+
+    @Override
+    public int pointsForSuccessfulAction() {
+        return 3;
     }
 }
