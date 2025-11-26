@@ -1,13 +1,14 @@
 package com.sac.service;
 
 import com.sac.model.GameMode;
+import com.sac.model.GameState;
+import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 @Slf4j
@@ -47,8 +48,9 @@ public class GameplayService {
 
     private void tryInitializeGame(String roomId, GameMode gameMode) {
         if (roomConnectionService.isFull(roomId) && !gameStateService.exists(roomId)) {
-            gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)), gameMode);
+            GameState gameState = gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)), gameMode);
             messageService.broadcastMessage("Welcome to Shoot and Capture, Mode - ".concat(gameMode.name()), roomId);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
             messageService.broadcastMessage(
                     String.format("%s gets to pick a number now",
                             gameStateService.getGameState(roomId).getCurrentPlayerId()),

@@ -12,7 +12,6 @@ import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
 import static com.sac.strategy.action.GameAction.EVOLVE;
@@ -33,6 +32,7 @@ public class Evolve implements Action {
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
         GameState gameState = gameStateService.getGameState(roomId);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        if (gameState.getActionPendingOn() == -1) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
         Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
         Specialization requestedTransition = actionContext.getSpecialization();
         if (preProcessChecks(webSocketSession, username, gameState, position, requestedTransition)) {
@@ -61,6 +61,10 @@ public class Evolve implements Action {
         }
         else if (actor.isFrozen()) {
             messageService.sendToSender(webSocketSession, "UNFREEZE actor before EVOLVE");
+            return false;
+        }
+        else if (requestedTransition == null) {
+            messageService.sendToSender(webSocketSession, "Choose Specialization to evolve");
             return false;
         }
         else if (!actor.getAllowedTransitions().contains(requestedTransition)) {

@@ -2,6 +2,8 @@ package com.sac.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sac.model.message.DefaultMessage;
+import com.sac.model.message.ServerResponse;
+import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
@@ -30,15 +32,19 @@ public class MessageService {
 
     public void sendMessage(WebSocketSession senderSession, String message, String roomId) throws IOException {
         Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
+        String username = SocketSessionUtil.getUserNameFromSession(senderSession);
         for (WebSocketSession session : sessions) {
-            if (!session.equals(senderSession) && session.isOpen())
-                session.sendMessage(new TextMessage(message));
+            if (!session.equals(senderSession) && session.isOpen()) {
+                ServerResponse response = new ServerResponse(ServerResponse.Type.MESSAGE, username, message);
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+            }
         }
     }
 
     public void sendToSender(WebSocketSession session, String message) {
         if (session.isOpen()) {
-            try { session.sendMessage(new TextMessage(message)); }
+            ServerResponse response = new ServerResponse(ServerResponse.Type.MESSAGE, "System", message);
+            try { session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response))); }
             catch (IOException e) { throw new RuntimeException(e); }
         }
     }

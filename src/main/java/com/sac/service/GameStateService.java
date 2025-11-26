@@ -18,7 +18,7 @@ public class GameStateService {
 
     private final ConcurrentHashMap<String, GameState> gameStates = new ConcurrentHashMap<>();
 
-    public void initializeGameState(String roomId, List<String> players, GameMode gameMode) {
+    public GameState initializeGameState(String roomId, List<String> players, GameMode gameMode) {
         if (!gameStates.containsKey(roomId)) {
             GameState gameState = GameState
                     .builder()
@@ -34,7 +34,9 @@ public class GameStateService {
                     .totalAvailableMoves(Integer.MAX_VALUE)
                     .build();
             gameStates.put(roomId, gameState);
+            return gameState;
         }
+        return null;
     }
 
     private List<Player> initializePlayers(List<String> players) {

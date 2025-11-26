@@ -8,8 +8,9 @@ import com.sac.model.message.MessageEnvelope.Type;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Action;
-import com.sac.strategy.action.GameAction;
 import com.sac.strategy.mode.Mode;
+import com.sac.util.MessageFormat;
+import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -38,10 +39,11 @@ public class ActionEnvelopeHandler implements EnvelopeHandler {
         Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
         action.performAction(webSocketSession, actionContext, roomId);
         GameState gameState = gameStateService.getGameState(roomId);
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         Mode mode = gameModeHandlerRegistry.getInstance(gameState.getGameMode());
         if (mode.computeWinner(roomId) != null) {
-            messageService.broadcastMessage(gameState.getCurrentPlayerId().concat(" won."), roomId);
-            webSocketSession.close(CloseStatus.NORMAL);
+            String winner = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+            messageService.broadcastMessage(MessageFormat.endGameWithWinner(winner, gameState), roomId);
         }
     }
 }

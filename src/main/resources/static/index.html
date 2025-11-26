@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaC: Shoot and Capture</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #4CAF50;
+            --danger-color: #d32f2f;
+            --border-color: #333;
+            --input-bg: #2c2c2c;
+            --highlight: #ffd700;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- SPLIT LOGIN SCREEN --- */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            z-index: 1000;
+        }
+
+        /* LEFT SIDE: RULES */
+        .login-left {
+            flex: 1;
+            background: #181818;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .rules-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .rules-container h1 { color: var(--accent-color); font-size: 2.5rem; margin-bottom: 10px; }
+        .rules-container h3 { color: var(--highlight); margin-top: 20px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .rules-container ul { padding-left: 20px; line-height: 1.6; color: #ccc; }
+        .rules-container li { margin-bottom: 8px; }
+
+        /* RIGHT SIDE: FORM */
+        .login-right {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #121212;
+        }
+
+        .login-box {
+            background: var(--panel-bg);
+            padding: 3rem;
+            border-radius: 12px;
+            border: 1px solid var(--accent-color);
+            text-align: center;
+            width: 350px;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.15);
+        }
+
+        /* --- COMMON INPUTS --- */
+        input, button, select {
+            padding: 14px;
+            margin: 10px 0;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: var(--input-bg);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+        input:focus { border-color: var(--accent-color); }
+
+        button {
+            background-color: var(--accent-color);
+            border: none; cursor: pointer; font-weight: bold;
+            text-transform: uppercase; margin-top: 20px;
+            transition: transform 0.1s, filter 0.2s;
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        .btn-danger { background-color: var(--danger-color); margin-top: 0; }
+
+        /* --- GAME UI (Hidden initially) --- */
+        #game-ui { display: none; flex-direction: column; height: 100vh; }
+
+        /* TOP BAR */
+        #top-bar {
+            background: var(--panel-bg);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #555; margin-right: 8px; }
+        .connected .status-indicator { background: var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
+
+        /* MAIN CONTAINER */
+        #game-container { flex: 1; display: flex; overflow: hidden; }
+
+        /* LEFT PANEL: BOARD */
+        #board-panel {
+            flex: 2; background: #000;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            border-right: 1px solid var(--border-color);
+        }
+        #ascii-display {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 15px; white-space: pre; color: #0f0;
+            text-shadow: 0 0 2px rgba(0, 255, 0, 0.4);
+        }
+        #game-message { margin-top: 20px; font-size: 1.2rem; color: var(--highlight); min-height: 1.5em; }
+
+        /* RIGHT PANEL: CONTROLS */
+        #sidebar {
+            flex: 1; min-width: 320px; max-width: 420px;
+            background: var(--panel-bg); display: flex; flex-direction: column;
+        }
+        #chat-panel { flex: 1; padding: 15px; border-bottom: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column; }
+        #chat-messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
+
+        .msg { margin-bottom: 6px; padding: 8px; border-radius: 4px; font-size: 0.9rem; }
+        .msg.system { color: #888; text-align: center; font-style: italic; font-size: 0.8rem; }
+        .msg.user { background: #2d2d2d; border-left: 3px solid #666; }
+        .msg.self { background: #1b5e20; text-align: right; border-right: 3px solid var(--accent-color); }
+
+        #controls-panel { padding: 20px; background: #181818; }
+        .control-group { background: var(--panel-bg); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; }
+        .control-group h4 { margin: 0 0 10px 0; color: var(--accent-color); text-transform: uppercase; font-size: 0.85rem; }
+
+        .hidden { display: none !important; }
+
+        /* GAME OVER MODAL */
+        #game-over-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: #1a1a1a; border: 2px solid var(--highlight);
+            padding: 30px; text-align: center; border-radius: 12px;
+        }
+        #final-board-display {
+            font-family: 'Consolas', monospace; white-space: pre;
+            color: var(--highlight); background: #000; padding: 15px;
+            margin: 20px 0; border-radius: 6px; text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 1. SPLIT LOGIN SCREEN -->
+<div id="login-screen">
+
+    <!-- LEFT: HOW TO PLAY -->
+    <div class="login-left">
+        <div class="rules-container">
+            <h1>⚔️ SaC: Shoot and Capture </h1>
+            <p style="font-size: 1.1rem; color: #aaa;">A strategic game of Prediction, Evolution, and Conquest.</p>
+
+            <h3>🎯 The Goal</h3>
+            <ul>
+                <li>Accumulate points by capturing opponent positions.</li>
+                <li>Eliminate the opponent to claim victory.</li>
+            </ul>
+
+            <h3>🎲 Phase 1: The Mind Game</h3>
+            <ul>
+                <li>One player secretly <strong>Picks</strong> a position (0-5).</li>
+                <li>The opponent tries to <strong>Guess</strong> it.</li>
+                <li><strong>If Guess is Wrong:</strong> The Picker gets a free ACTION turn.</li>
+                <li><strong>If Guess is Correct:</strong> The turn flips immediately!</li>
+            </ul>
+
+            <h3>⚔️ Phase 2: The Action Phase</h3>
+            <ul>
+                <li><strong>SPAWN:</strong> Create a Novice unit at an empty position.</li>
+                <li><strong>EVOLVE:</strong> Upgrade a Novice into a Fighter (Needs 1 turn).</li>
+                <li><strong>ATTACK:</strong> Capture an enemy position!</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- RIGHT: LOGIN FORM -->
+    <div class="login-right">
+        <div class="login-box">
+            <h2 style="margin-bottom: 20px;">ENTER THE ARENA</h2>
+            <input type="text" id="username" placeholder="Username" autocomplete="off">
+            <input type="text" id="roomId" placeholder="Room ID (e.g., room1)" autocomplete="off">
+            <button onclick="connect()">JOIN GAME</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. GAME INTERFACE (Wrapper) -->
+<div id="game-ui">
+
+    <!-- TOP BAR -->
+    <div id="top-bar">
+        <div id="connection-status"><span class="status-indicator"></span><span id="room-display">Connecting...</span></div>
+        <button class="btn-danger" onclick="disconnect()" style="width: auto; margin: 0; padding: 8px 16px; font-size: 12px;">DISCONNECT</button>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div id="game-container">
+        <!-- LEFT: BOARD -->
+        <div id="board-panel">
+            <div id="ascii-display">
+                Waiting for Game State...
+                (The battlefield will load shortly)
+            </div>
+            <div id="game-message"></div>
+        </div>
+
+        <!-- RIGHT: SIDEBAR -->
+        <div id="sidebar">
+            <!-- CHAT -->
+            <div id="chat-panel">
+                <div id="chat-messages">
+                    <div class="msg system">Welcome to the Battle Arena.</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="chat-input" placeholder="Chat..." onkeypress="handleChatKey(event)">
+                    <button onclick="sendChat()" style="width: 60px; margin: 0;">➤</button>
+                </div>
+            </div>
+
+            <!-- CONTROLS -->
+            <div id="controls-panel">
+                <!-- PICKER -->
+                <div class="control-group">
+                    <h4>🔢 Number Pick / Guess</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="game-number" min="0" max="5" placeholder="0-5" style="text-align: center; font-weight: bold; margin: 0;">
+                        <button onclick="sendNumberPayload()" style="margin: 0;">SUBMIT</button>
+                    </div>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="control-group">
+                    <h4>⚔️ Tactical Actions</h4>
+                    <select id="action-type" style="margin-top: 0;">
+                        <option value="SPAWN">SPAWN</option>
+                        <option value="EVOLVE">EVOLVE</option>
+                        <option value="ATTACK_AND_CAPTURE">ATTACK & CAPTURE</option>
+                    </select>
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <input type="number" id="dest-pos" placeholder="Position (0-5)" style="margin: 0; text-align: center;">
+                    </div>
+
+                    <select id="specialization" style="margin-top: 10px;">
+                        <option value="">-- Select Class (Opt) --</option>
+                        <option value="NOVICE">NOVICE</option>
+                        <option value="FIGHTER">FIGHTER</option>
+                    </select>
+
+                    <button class="btn-danger" onclick="sendActionPayload()">EXECUTE ACTION</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div id="game-over-modal" class="hidden">
+    <div class="modal-content">
+        <h2 id="game-result-title">GAME OVER</h2>
+        <div id="final-board-display"></div>
+        <button onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+</div>
+
+<!-- JAVASCRIPT LOGIC -->
+<script>
+    let ws;
+    let myUsername = "";
+
+    function connect() {
+        const user = document.getElementById("username").value.trim();
+        const room = document.getElementById("roomId").value.trim();
+
+        if (!user || !room) {
+            alert("Username and Room ID are required!");
+            return;
+        }
+
+        myUsername = user;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const url = `${protocol}//${host}/ws/room?roomId=${room}&username=${user}`;
+
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            // Hide Login, Show Game
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("game-ui").style.display = "flex";
+
+            document.getElementById("connection-status").classList.add("connected");
+            document.getElementById("room-display").innerText = `Room: ${room} | Commander: ${user}`;
+            addLog("System", "Connected to server.");
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                if (typeof msg === 'string') { addLog("System", msg); return; }
+                handleMessage(msg);
+            } catch (e) {
+                addLog("System", event.data);
+            }
+        };
+
+        ws.onclose = () => {
+            document.getElementById("connection-status").classList.remove("connected");
+            document.getElementById("room-display").innerText = "DISCONNECTED";
+            addLog("System", "Connection lost.");
+            alert("Disconnected from server.");
+            location.reload();
+        };
+    }
+
+    function disconnect() {
+        if (ws) ws.close();
+    }
+
+    function handleMessage(msg) {
+        if (msg.type === "STATE") {
+            document.getElementById("ascii-display").innerText = msg.content;
+        } else if (msg.type === "MESSAGE") {
+            addLog(msg.sender || "System", msg.content);
+        } else if (msg.type === "ERROR") {
+            document.getElementById("game-message").innerText = "❌ " + msg.content;
+            document.getElementById("game-message").style.color = "#ff4444";
+            addLog("System", "Error: " + msg.content);
+        } else if (msg.type === "ACTION") {
+            addLog("Action (" + msg.sender + ")", msg.content);
+        } else if (msg.type === "FINISH") {
+            showGameOver(msg.sender, msg.content);
+        } else if (msg.type === "WAITING_FOR_RESPONSE") {
+            document.getElementById("game-message").innerText = "⚠️ " + msg.content;
+            document.getElementById("game-message").style.color = "#ffd700";
+        } else if (msg.type === "CHOOSE") {
+            document.getElementById("game-message").innerText = "👉 " + msg.content;
+            document.getElementById("game-message").style.color = "#0f0";
+        }
+    }
+
+    function showGameOver(winnerName, asciiContent) {
+        document.getElementById("game-over-modal").classList.remove("hidden");
+        document.getElementById("game-result-title").innerText = "🏆 WINNER: " + winnerName + " 🏆";
+        document.getElementById("final-board-display").innerText = asciiContent;
+        document.getElementById("connection-status").classList.remove("connected");
+        document.getElementById("room-display").innerText = "GAME OVER";
+    }
+
+    // --- SENDING ---
+    function sendChat() {
+        const input = document.getElementById("chat-input");
+        const text = input.value.trim();
+        if (!text) return;
+        ws.send(JSON.stringify({ type: "GAME", payload: { type: "CHAT", content: text } }));
+        addLog("You", text, true);
+        input.value = "";
+    }
+
+    function handleChatKey(e) { if (e.key === 'Enter') sendChat(); }
+
+    function sendNumberPayload() {
+        const num = document.getElementById("game-number").value;
+        if (num === "") return;
+        ws.send(JSON.stringify({ type: "GAME", payload: { type: "CHOOSE", content: num.toString() } }));
+        console.log("Sent Number:", num);
+        document.getElementById("game-number").value = "";
+    }
+
+    function sendActionPayload() {
+        const action = document.getElementById("action-type").value;
+        const dest = document.getElementById("dest-pos").value;
+        const spec = document.getElementById("specialization").value;
+
+        const payload = {
+            gameAction: action,
+            sourcePosition: -1,
+            destinationPosition: dest ? parseInt(dest) : -1,
+            specialization: spec || null
+        };
+
+        ws.send(JSON.stringify({ type: "ACTION", payload: payload }));
+        console.log("Sent Action:", action);
+        document.getElementById("dest-pos").value = "";
+    }
+
+    function addLog(sender, text, isSelf = false) {
+        const box = document.getElementById("chat-messages");
+        const div = document.createElement("div");
+        div.className = "msg " + (isSelf ? "self" : "user");
+        if (sender === "System") div.className = "msg system";
+        div.innerText = (sender ? sender + ": " : "") + text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+</body>
+</html>

@@ -36,8 +36,8 @@ public class AttackAndCapture implements Action {
         Position playerPosition = gameStateService.getPlayerPosition(roomId, playerUserName, playerPositionId);
 
         String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
-        int opponentPositionId = actionContext.getDestinationPosition();
-        if (opponentPositionId == -1) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
+        Integer opponentPositionId = actionContext.getDestinationPosition();
+        if (opponentPositionId == null) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
         Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
 
         if (preProcessChecks(webSocketSession, playerUserName,
