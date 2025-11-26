@@ -16,6 +16,7 @@ public class DefaultMessage {
 
     public enum Type {
         CHAT,
+        STATE,
         WAITING_FOR_RESPONSE,
         CHOOSE
     }
