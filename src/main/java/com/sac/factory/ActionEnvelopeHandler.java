@@ -5,6 +5,7 @@ import com.sac.model.GameState;
 import com.sac.model.message.ActionContext;
 import com.sac.model.message.MessageEnvelope;
 import com.sac.model.message.MessageEnvelope.Type;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Action;
@@ -34,15 +35,18 @@ public class ActionEnvelopeHandler implements EnvelopeHandler {
 
     @Override
     public void handle(WebSocketSession webSocketSession, MessageEnvelope messageEnvelope, String roomId) throws IOException {
-        ActionContext actionContext = objectMapper.treeToValue(messageEnvelope.getPayload(), ActionContext.class);
-        Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
-        action.performAction(webSocketSession, actionContext, roomId);
-        GameState gameState = gameStateService.getGameState(roomId);
-        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
-        Mode mode = gameModeHandlerRegistry.getInstance(gameState.getGameMode());
-        if (mode.computeWinner(roomId) != null) {
-            String winner = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-            messageService.broadcastMessage(MessageFormat.endGameWithWinner(winner, gameState), roomId);
-        }
+        if (gameStateService.exists(roomId)) {
+            ActionContext actionContext = objectMapper.treeToValue(messageEnvelope.getPayload(), ActionContext.class);
+            Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
+            action.performAction(webSocketSession, actionContext, roomId);
+            GameState gameState = gameStateService.getGameState(roomId);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+            Mode mode = gameModeHandlerRegistry.getInstance(gameState.getGameMode());
+            if (mode.computeWinner(roomId) != null) {
+                String winner = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+                messageService.broadcastMessage(MessageFormat.endGameWithWinner(winner, gameState), roomId);
+            }
+        } else
+            messageService.sendToSender(webSocketSession, "Game not initialized yet", ServerResponse.Type.ERROR);
     }
 }

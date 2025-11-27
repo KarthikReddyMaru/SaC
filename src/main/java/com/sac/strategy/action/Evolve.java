@@ -69,7 +69,7 @@ public class Evolve implements Action {
             messageService.sendToSender(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
             return false;
         }
-        else if (!actor.getAllowedTransitions().contains(requestedTransition)) {
+        else if (!actor.getAllowedTransitions().contains(requestedTransition) || actor.getCurrentState().equals(requestedTransition)) {
             String errorMessage = String.format("%s cannot EVOLVE to %s",
                     actor.getCurrentState(), requestedTransition);
             messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
