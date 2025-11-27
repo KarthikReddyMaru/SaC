@@ -4,6 +4,7 @@ import com.sac.model.GameState;
 import com.sac.model.Position;
 import com.sac.model.actor.Actor;
 import com.sac.model.message.ActionContext;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.service.RoomConnectionService;
@@ -37,7 +38,11 @@ public class AttackAndCapture implements Action {
 
         String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
         Integer opponentPositionId = actionContext.getDestinationPosition();
-        if (opponentPositionId == null) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
+        if (opponentPositionId == null) {
+            messageService.sendToSender(webSocketSession,
+                "Pick a destination position to capture", ServerResponse.Type.ERROR);
+            return;
+        };
         Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
 
         if (preProcessChecks(webSocketSession, playerUserName,
@@ -69,7 +74,9 @@ public class AttackAndCapture implements Action {
             return false;
         }
         else if (opponentPosition.isCapturedByOpponent()) {
-            messageService.sendToSender(webSocketSession, "This position is already captured, try another position");
+            messageService.sendToSender(webSocketSession,
+                    "This position is already captured, try another position",
+                    ServerResponse.Type.ERROR);
             return false;
         }
         return true;

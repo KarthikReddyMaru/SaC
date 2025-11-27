@@ -5,11 +5,13 @@ import com.sac.model.Position;
 import com.sac.model.actor.Actor;
 import com.sac.model.message.DefaultMessage;
 import com.sac.model.message.DefaultMessage.Type;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class Choose implements MessageHandlerStrategy {
@@ -42,7 +45,10 @@ public class Choose implements MessageHandlerStrategy {
         String respondedPlayerId = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         Map<String, Integer> respondedPlayers = roomsRespondedPlayers.get(roomId);
         if (respondedPlayers.containsKey(respondedPlayerId)) {
-            messageService.sendToSender(webSocketSession, "Your response is already recorded, wait for opponent");
+            messageService.sendToSender(
+                    webSocketSession,
+                    "Your response is already recorded, wait for opponent",
+                    ServerResponse.Type.ERROR);
         } else {
             respondedPlayers.put(respondedPlayerId, Integer.parseInt(message.getContent()));
             messageService.sendToSender(webSocketSession, "Your response is recorded as "+message.getContent());
@@ -57,12 +63,16 @@ public class Choose implements MessageHandlerStrategy {
         if (gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
                             gameState.getCurrentPlayerId());
-            messageService.sendToSender(webSocketSession, errorMsg);
+            messageService.sendToSender(webSocketSession,
+                    MessageFormat.systemError(errorMsg),
+                    ServerResponse.Type.ERROR);
             return false;
         }
-        if (!Pattern.matches("^[1-6]$", chosenNumber)) {
-            String errorMsg = "Only positions from 1 to 6 are allowed";
-            messageService.sendToSender(webSocketSession, errorMsg);
+        if (!Pattern.matches("^[0-5]$", chosenNumber)) {
+            String errorMsg = "Only positions from 0 to 5 are allowed";
+            messageService.sendToSender(webSocketSession,
+                    MessageFormat.systemError(errorMsg),
+                    ServerResponse.Type.ERROR);
             return false;
         }
         return true;
@@ -76,14 +86,17 @@ public class Choose implements MessageHandlerStrategy {
         if (chosenPosition != guessedPosition) {
             gameStateService.setCurrentPlayerId(roomId, chosenPlayerId);
             gameStateService.setActionPendingOn(roomId, chosenPosition);
-            messageService.broadcastMessage(String.format("%s won, time for action on position %s",
-                    chosenPlayerId, chosenPosition), roomId);
+            messageService.broadcastMessage(
+                    String.format("%s won, time for action on position %s", chosenPlayerId, chosenPosition),
+                    roomId, ServerResponse.Type.INFO);
             tryValidActionPosition(roomId, chosenPlayerId, chosenPosition, guessedPlayerId);
         } else {
             gameStateService.setCurrentPlayerId(roomId, guessedPlayerId);
-            messageService.broadcastMessage(String.format("%s won, gear up to choose",
-                    guessedPlayerId), roomId);
+            messageService.broadcastMessage(
+                    String.format("%s won, gear up to choose", guessedPlayerId),
+                    roomId, ServerResponse.Type.INFO);
         }
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         respondedPlayers.clear();
     }
 

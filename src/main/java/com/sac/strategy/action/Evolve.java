@@ -6,6 +6,7 @@ import com.sac.model.Position;
 import com.sac.model.actor.Actor;
 import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.util.MessageFormat;
@@ -39,6 +40,7 @@ public class Evolve implements Action {
             int actionPerformingOn = gameState.getActionPendingOn();
             Specialization from = position.getActor().getCurrentState();
             position.setActor(ActorFactory.getInstance(requestedTransition));
+            gameStateService.getPlayer(roomId, username).addPoints(pointsForSuccessfulAction());
             messageService.broadcastMessage(
                     MessageFormat.evolveSuccessAction(username, actionPerformingOn, from, requestedTransition),
                     roomId);
@@ -56,21 +58,21 @@ public class Evolve implements Action {
         }
         Actor actor = position.getActor();
         if (actor == null) {
-            messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE");
+            messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
             return false;
         }
         else if (actor.isFrozen()) {
-            messageService.sendToSender(webSocketSession, "UNFREEZE actor before EVOLVE");
+            messageService.sendToSender(webSocketSession, "UNFREEZE actor before EVOLVE", ServerResponse.Type.ERROR);
             return false;
         }
         else if (requestedTransition == null) {
-            messageService.sendToSender(webSocketSession, "Choose Specialization to evolve");
+            messageService.sendToSender(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
             return false;
         }
         else if (!actor.getAllowedTransitions().contains(requestedTransition)) {
             String errorMessage = String.format("%s cannot EVOLVE to %s",
                     actor.getCurrentState(), requestedTransition);
-            messageService.sendToSender(webSocketSession, errorMessage);
+            messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
             return false;
         }
         return true;
@@ -78,6 +80,6 @@ public class Evolve implements Action {
 
     @Override
     public int pointsForSuccessfulAction() {
-        return 0;
+        return 1;
     }
 }

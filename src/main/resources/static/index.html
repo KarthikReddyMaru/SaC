@@ -8,6 +8,7 @@
         :root {
             --bg-color: #121212;
             --panel-bg: #1e1e1e;
+            --sidebar-bg: #181818;
             --text-color: #e0e0e0;
             --accent-color: #4CAF50;
             --danger-color: #d32f2f;
@@ -24,9 +25,12 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            overflow: hidden;
         }
 
-        /* --- SPLIT LOGIN SCREEN --- */
+        /* =========================================
+           1. LOGIN & RULES SCREEN
+           ========================================= */
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color);
@@ -34,176 +38,207 @@
             z-index: 1000;
         }
 
-        /* LEFT SIDE: RULES */
+        /* Rules (Left) */
         .login-left {
-            flex: 1;
-            background: #181818;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            border-right: 1px solid var(--border-color);
+            flex: 1.4; background: #181818;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            border-right: 1px solid var(--border-color); padding: 40px;
         }
+        .rules-panel { max-width: 600px; color: #e0e0e0; }
+        .rules-panel h1 { color: var(--accent-color); margin: 0; font-size: 2.5rem; text-transform: uppercase; }
+        .rules-panel h3 { color: var(--highlight); margin-top: 25px; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 1.1rem; }
+        .rules-panel ul { padding-left: 20px; line-height: 1.6; color: #ccc; }
+        .rules-panel li { margin-bottom: 10px; }
+        .rules-note { font-size: 0.9em; color: #888; margin-top: 30px; border-top: 1px solid #333; padding-top: 10px; font-style: italic; }
 
-        .rules-container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .rules-container h1 { color: var(--accent-color); font-size: 2.5rem; margin-bottom: 10px; }
-        .rules-container h3 { color: var(--highlight); margin-top: 20px; border-bottom: 1px solid #444; padding-bottom: 5px; }
-        .rules-container ul { padding-left: 20px; line-height: 1.6; color: #ccc; }
-        .rules-container li { margin-bottom: 8px; }
-
-        /* RIGHT SIDE: FORM */
+        /* Login Form (Right) */
         .login-right {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #121212;
+            flex: 1; background: #121212;
+            display: flex; justify-content: center; align-items: center;
         }
-
         .login-box {
-            background: var(--panel-bg);
-            padding: 3rem;
-            border-radius: 12px;
-            border: 1px solid var(--accent-color);
-            text-align: center;
-            width: 350px;
+            background: var(--panel-bg); padding: 3rem;
+            border-radius: 12px; border: 1px solid var(--accent-color);
+            text-align: center; width: 350px;
             box-shadow: 0 0 30px rgba(76, 175, 80, 0.15);
         }
+        .login-box h2 { margin-bottom: 20px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* --- COMMON INPUTS --- */
+        /* =========================================
+           2. COMMON ELEMENTS
+           ========================================= */
         input, button, select {
-            padding: 14px;
-            margin: 10px 0;
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: var(--input-bg);
-            color: #fff;
-            font-size: 15px;
-            outline: none;
+            padding: 12px; margin: 8px 0; width: 100%;
+            box-sizing: border-box; border-radius: 6px;
+            border: 1px solid #444; background: var(--input-bg);
+            color: #fff; font-size: 14px; outline: none;
         }
-        input:focus { border-color: var(--accent-color); }
+        input:focus, select:focus { border-color: var(--accent-color); }
 
         button {
-            background-color: var(--accent-color);
-            border: none; cursor: pointer; font-weight: bold;
-            text-transform: uppercase; margin-top: 20px;
-            transition: transform 0.1s, filter 0.2s;
+            background-color: var(--accent-color); border: none;
+            cursor: pointer; font-weight: bold; text-transform: uppercase;
+            margin-top: 15px; transition: transform 0.1s, filter 0.2s;
         }
         button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-danger { background-color: var(--danger-color); margin-top: 15px; }
 
-        .btn-danger { background-color: var(--danger-color); margin-top: 0; }
-
-        /* --- GAME UI (Hidden initially) --- */
+        /* =========================================
+           3. GAME UI LAYOUT (2-Column)
+           ========================================= */
         #game-ui { display: none; flex-direction: column; height: 100vh; }
 
-        /* TOP BAR */
+        /* Header */
         #top-bar {
-            background: var(--panel-bg);
-            padding: 10px 20px;
+            background: var(--panel-bg); padding: 10px 20px;
             border-bottom: 1px solid var(--border-color);
             display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
         }
         .status-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #555; margin-right: 8px; }
         .connected .status-indicator { background: var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
+        #room-display { font-family: monospace; font-size: 1.1rem; }
 
-        /* MAIN CONTAINER */
+        /* Main Container */
         #game-container { flex: 1; display: flex; overflow: hidden; }
 
-        /* LEFT PANEL: BOARD */
+        /* --- LEFT PANEL: BOARD (Hero) --- */
         #board-panel {
-            flex: 2; background: #000;
+            flex: 1; /* Takes all remaining space */
+            background: #000;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            border-right: 1px solid var(--border-color);
+            overflow: hidden;
+            position: relative;
         }
         #ascii-display {
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 15px; white-space: pre; color: #0f0;
+            background: #111; padding: 30px; border-radius: 4px; border: 1px solid #333;
             text-shadow: 0 0 2px rgba(0, 255, 0, 0.4);
+            max-width: 90%; max-height: 90%; overflow: auto;
         }
-        #game-message { margin-top: 20px; font-size: 1.2rem; color: var(--highlight); min-height: 1.5em; }
 
-        /* RIGHT PANEL: CONTROLS */
+        /* REMOVED: #game-message style block (Removed element from HTML too) */
+
+        /* --- RIGHT PANEL: SIDEBAR (Fixed Width) --- */
         #sidebar {
-            flex: 1; min-width: 320px; max-width: 420px;
-            background: var(--panel-bg); display: flex; flex-direction: column;
+            width: 400px; min-width: 350px;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
         }
-        #chat-panel { flex: 1; padding: 15px; border-bottom: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column; }
-        #chat-messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
 
-        .msg { margin-bottom: 6px; padding: 8px; border-radius: 4px; font-size: 0.9rem; }
-        .msg.system { color: #888; text-align: center; font-style: italic; font-size: 0.8rem; }
-        .msg.user { background: #2d2d2d; border-left: 3px solid #666; }
-        .msg.self { background: #1b5e20; text-align: right; border-right: 3px solid var(--accent-color); }
+        /* SECTION 1: CONTROLS (Top) */
+        #controls-panel {
+            flex: 0 0 auto; /* Do not grow, take only needed height */
+            padding: 20px;
+            background: #202020;
+            border-bottom: 1px solid var(--border-color);
+            overflow-y: auto;
+            max-height: 60vh; /* Prevent controls from eating entire sidebar on small screens */
+        }
 
-        #controls-panel { padding: 20px; background: #181818; }
-        .control-group { background: var(--panel-bg); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; }
-        .control-group h4 { margin: 0 0 10px 0; color: var(--accent-color); text-transform: uppercase; font-size: 0.85rem; }
+        .control-group { background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #383838; margin-bottom: 15px; }
+        .control-group h4 { margin: 0 0 10px 0; color: var(--accent-color); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+        .input-label { font-size: 0.8rem; color: #999; margin-top: 12px; display: block; margin-bottom: 4px; }
+
+        /* SECTION 2: CHAT (Bottom - Fills rest) */
+        #chat-panel {
+            flex: 1; /* Grow to fill remaining height */
+            display: flex; flex-direction: column;
+            background: var(--panel-bg);
+            overflow: hidden;
+        }
+        #chat-header { padding: 10px 15px; background: #1a1a1a; color: #888; font-size: 0.85rem; font-weight: bold; border-bottom: 1px solid #333; text-transform: uppercase; }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        #chat-input-area { padding: 15px; background: #252526; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }
+
+        /* Chat Bubbles */
+        .msg { padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; word-wrap: break-word; line-height: 1.4; max-width: 85%; }
+        .msg.system { color: #888; align-self: center; font-style: italic; font-size: 0.8rem; max-width: 100%; margin: 5px 0; text-align: center; }
+        .msg.user { background: #333; align-self: flex-start; border-bottom-left-radius: 0; }
+        .msg.self { background: #1b5e20; align-self: flex-end; border-bottom-right-radius: 0; color: #fff; }
+
+        /* --- UPDATED INFO MESSAGE STYLE (Minimal) --- */
+        .msg.info {
+            color: var(--highlight); /* Subtle Gold/Yellow */
+            font-style: italic;
+            align-self: center;
+            text-align: center;
+            font-size: 0.85rem;
+            max-width: 95%;
+            margin: 8px 0;
+            /* No background, no border */
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+        /* =========================================
+           4. BUTTON BAR STYLES
+           ========================================= */
+        .number-bar { display: flex; gap: 5px; width: 100%; margin-top: 5px; }
+        .number-bar button {
+            flex: 1; padding: 12px 0; margin: 0;
+            font-size: 1.1rem; font-weight: bold;
+            background: #333; border: 1px solid #555;
+            color: #ccc; border-radius: 6px;
+            cursor: pointer; transition: all 0.2s;
+        }
+
+        .number-bar.instant button:hover { background: var(--accent-color); color: #fff; border-color: var(--accent-color); transform: translateY(-2px); }
+        .number-bar.selectable button.active { background: var(--highlight); color: #000; border-color: var(--highlight); box-shadow: 0 0 8px rgba(255, 215, 0, 0.3); }
 
         .hidden { display: none !important; }
 
-        /* GAME OVER MODAL */
+        /* =========================================
+           5. GAME OVER MODAL
+           ========================================= */
         #game-over-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 2000;
+            background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000;
         }
         .modal-content {
             background: #1a1a1a; border: 2px solid var(--highlight);
             padding: 30px; text-align: center; border-radius: 12px;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.2);
         }
         #final-board-display {
             font-family: 'Consolas', monospace; white-space: pre;
             color: var(--highlight); background: #000; padding: 15px;
-            margin: 20px 0; border-radius: 6px; text-align: left;
+            margin: 20px 0; border-radius: 6px; text-align: left; font-size: 12px;
         }
     </style>
 </head>
 <body>
 
-<!-- 1. SPLIT LOGIN SCREEN -->
+<!-- LOGIN SCREEN -->
 <div id="login-screen">
-
-    <!-- LEFT: HOW TO PLAY -->
     <div class="login-left">
-        <div class="rules-container">
-            <h1>⚔️ SaC: Shoot and Capture </h1>
-            <p style="font-size: 1.1rem; color: #aaa;">A strategic game of Prediction, Evolution, and Conquest.</p>
-
-            <h3>🎯 The Goal</h3>
-            <ul>
-                <li>Accumulate points by capturing opponent positions.</li>
-                <li>Eliminate the opponent to claim victory.</li>
+        <div class="rules-panel">
+            <h1>🚀 SaC: Shoot & Capture</h1>
+            <p style="color: #888; margin-top: 5px;">A Strategy Game of Prediction & Evolution</p>
+            <h3 style="color: #ffd700;">🎮 How to Play</h3>
+            <ul style="line-height: 1.6;">
+                <li><strong>Pick & Guess:</strong> One player picks a secret spot (0-5). The other tries to guess it.</li>
+                <li><strong>If they Guess WRONG:</strong> You get to perform an ACTION on that spot.</li>
+                <li><strong>If they Guess RIGHT:</strong> Turn flips to them immediately.</li>
             </ul>
-
-            <h3>🎲 Phase 1: The Mind Game</h3>
-            <ul>
-                <li>One player secretly <strong>Picks</strong> a position (0-5).</li>
-                <li>The opponent tries to <strong>Guess</strong> it.</li>
-                <li><strong>If Guess is Wrong:</strong> The Picker gets a free ACTION turn.</li>
-                <li><strong>If Guess is Correct:</strong> The turn flips immediately!</li>
+            <h3 style="color: #d32f2f;">⚔️ Actions & Points</h3>
+            <ul style="list-style: none; padding: 0;">
+                <li>🥚 <strong>SPAWN (0 pts):</strong> Place a Novice unit.</li>
+                <li>⚡ <strong>EVOLVE (+1 pt):</strong> Upgrade Novice to Fighter.</li>
+                <li>🔥 <strong>ATTACK (+3 pts):</strong> Capture enemy position.</li>
             </ul>
-
-            <h3>⚔️ Phase 2: The Action Phase</h3>
-            <ul>
-                <li><strong>SPAWN:</strong> Create a Novice unit at an empty position.</li>
-                <li><strong>EVOLVE:</strong> Upgrade a Novice into a Fighter (Needs 1 turn).</li>
-                <li><strong>ATTACK:</strong> Capture an enemy position!</li>
-            </ul>
+            <p class="rules-note">*Note: You cannot perform actions on a position you have already lost (Captured).</p>
         </div>
     </div>
-
-    <!-- RIGHT: LOGIN FORM -->
     <div class="login-right">
         <div class="login-box">
-            <h2 style="margin-bottom: 20px;">ENTER THE ARENA</h2>
+            <h2>ENTER THE ARENA</h2>
             <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="text" id="roomId" placeholder="Room ID (e.g., room1)" autocomplete="off">
             <button onclick="connect()">JOIN GAME</button>
@@ -211,73 +246,89 @@
     </div>
 </div>
 
-<!-- 2. GAME INTERFACE (Wrapper) -->
+<!-- GAME UI -->
 <div id="game-ui">
-
-    <!-- TOP BAR -->
     <div id="top-bar">
         <div id="connection-status"><span class="status-indicator"></span><span id="room-display">Connecting...</span></div>
         <button class="btn-danger" onclick="disconnect()" style="width: auto; margin: 0; padding: 8px 16px; font-size: 12px;">DISCONNECT</button>
     </div>
 
-    <!-- MAIN CONTAINER -->
     <div id="game-container">
-        <!-- LEFT: BOARD -->
+
+        <!-- LEFT: BOARD (Hero) -->
         <div id="board-panel">
             <div id="ascii-display">
                 Waiting for Game State...
                 (The battlefield will load shortly)
             </div>
-            <div id="game-message"></div>
+            <!-- REMOVED THE EXTRA GAME MESSAGE DIV -->
         </div>
 
-        <!-- RIGHT: SIDEBAR -->
+        <!-- RIGHT: SIDEBAR (Controls + Chat) -->
         <div id="sidebar">
-            <!-- CHAT -->
-            <div id="chat-panel">
-                <div id="chat-messages">
-                    <div class="msg system">Welcome to the Battle Arena.</div>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="chat-input" placeholder="Chat..." onkeypress="handleChatKey(event)">
-                    <button onclick="sendChat()" style="width: 60px; margin: 0;">➤</button>
-                </div>
-            </div>
 
-            <!-- CONTROLS -->
+            <!-- 1. CONTROLS (Top) -->
             <div id="controls-panel">
-                <!-- PICKER -->
                 <div class="control-group">
-                    <h4>🔢 Number Pick / Guess</h4>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="number" id="game-number" min="0" max="5" placeholder="0-5" style="text-align: center; font-weight: bold; margin: 0;">
-                        <button onclick="sendNumberPayload()" style="margin: 0;">SUBMIT</button>
+                    <h4>🔢 Pick / Guess</h4>
+                    <div class="number-bar instant">
+                        <button onclick="sendNumberPayload(0)">0</button>
+                        <button onclick="sendNumberPayload(1)">1</button>
+                        <button onclick="sendNumberPayload(2)">2</button>
+                        <button onclick="sendNumberPayload(3)">3</button>
+                        <button onclick="sendNumberPayload(4)">4</button>
+                        <button onclick="sendNumberPayload(5)">5</button>
                     </div>
                 </div>
 
-                <!-- ACTIONS -->
                 <div class="control-group">
                     <h4>⚔️ Tactical Actions</h4>
-                    <select id="action-type" style="margin-top: 0;">
+                    <select id="action-type" style="margin-top: 0;" onchange="updateUIForAction()">
                         <option value="SPAWN">SPAWN</option>
                         <option value="EVOLVE">EVOLVE</option>
                         <option value="ATTACK_AND_CAPTURE">ATTACK & CAPTURE</option>
                     </select>
 
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <input type="number" id="dest-pos" placeholder="Position (0-5)" style="margin: 0; text-align: center;">
+                    <!-- Dynamic: Target Pos -->
+                    <div id="target-pos-container" style="display: none;">
+                        <label class="input-label">Target Position:</label>
+                        <div class="number-bar selectable" id="action-pos-bar">
+                            <button onclick="toggleSelection(0, 'pos')">0</button>
+                            <button onclick="toggleSelection(1, 'pos')">1</button>
+                            <button onclick="toggleSelection(2, 'pos')">2</button>
+                            <button onclick="toggleSelection(3, 'pos')">3</button>
+                            <button onclick="toggleSelection(4, 'pos')">4</button>
+                            <button onclick="toggleSelection(5, 'pos')">5</button>
+                        </div>
+                        <input type="hidden" id="selected-dest-pos" value="">
                     </div>
 
-                    <select id="specialization" style="margin-top: 10px;">
-                        <option value="">-- Select Class (Opt) --</option>
-                        <option value="NOVICE">NOVICE</option>
-                        <option value="FIGHTER">FIGHTER</option>
-                    </select>
+                    <!-- Dynamic: Spec -->
+                    <div id="spec-container" style="display: none;">
+                        <label class="input-label">Evolve Into:</label>
+                        <div class="number-bar selectable" id="spec-bar">
+                            <button onclick="toggleSelection('FIGHTER', 'spec')" style="font-size: 0.9rem;">FIGHTER</button>
+                        </div>
+                        <input type="hidden" id="selected-spec" value="">
+                    </div>
 
                     <button class="btn-danger" onclick="sendActionPayload()">EXECUTE ACTION</button>
                 </div>
             </div>
+
+            <!-- 2. CHAT (Bottom) -->
+            <div id="chat-panel">
+                <div id="chat-header">COMMS LOG</div>
+                <div id="chat-messages">
+                    <div class="msg system">Welcome to the Battle Arena.</div>
+                </div>
+                <div id="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Message..." onkeypress="handleChatKey(event)" style="margin: 0;">
+                    <button onclick="sendChat()" style="width: 50px; margin: 0; padding: 0;">➤</button>
+                </div>
+            </div>
         </div>
+
     </div>
 </div>
 
@@ -290,19 +341,16 @@
     </div>
 </div>
 
-<!-- JAVASCRIPT LOGIC -->
 <script>
     let ws;
     let myUsername = "";
 
+    window.onload = function() { updateUIForAction(); }
+
     function connect() {
         const user = document.getElementById("username").value.trim();
         const room = document.getElementById("roomId").value.trim();
-
-        if (!user || !room) {
-            alert("Username and Room ID are required!");
-            return;
-        }
+        if (!user || !room) { alert("Required fields missing"); return; }
 
         myUsername = user;
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -312,13 +360,11 @@
         ws = new WebSocket(url);
 
         ws.onopen = () => {
-            // Hide Login, Show Game
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("game-ui").style.display = "flex";
-
             document.getElementById("connection-status").classList.add("connected");
-            document.getElementById("room-display").innerText = `Room: ${room} | Commander: ${user}`;
-            addLog("System", "Connected to server.");
+            document.getElementById("room-display").innerText = `Room: ${room} | Cmdr: ${user}`;
+            addLog("System", "Connected.");
         };
 
         ws.onmessage = (event) => {
@@ -326,55 +372,153 @@
                 const msg = JSON.parse(event.data);
                 if (typeof msg === 'string') { addLog("System", msg); return; }
                 handleMessage(msg);
-            } catch (e) {
-                addLog("System", event.data);
-            }
+            } catch (e) { addLog("System", event.data); }
         };
 
         ws.onclose = () => {
             document.getElementById("connection-status").classList.remove("connected");
             document.getElementById("room-display").innerText = "DISCONNECTED";
-            addLog("System", "Connection lost.");
-            alert("Disconnected from server.");
+            alert("Connection Lost");
             location.reload();
         };
     }
 
-    function disconnect() {
-        if (ws) ws.close();
-    }
+    function disconnect() { if(ws) ws.close(); }
 
     function handleMessage(msg) {
+        // ROBUSTNESS: Unwrap if content is double-JSON
+        if (typeof msg.content === 'string' && msg.content.startsWith('{')) {
+            try {
+                const inner = JSON.parse(msg.content);
+                if (inner.type && inner.content) msg = inner;
+            } catch(e) {}
+        }
+
         if (msg.type === "STATE") {
             document.getElementById("ascii-display").innerText = msg.content;
-        } else if (msg.type === "MESSAGE") {
+        }
+        else if (msg.type === "MESSAGE") {
             addLog(msg.sender || "System", msg.content);
-        } else if (msg.type === "ERROR") {
-            document.getElementById("game-message").innerText = "❌ " + msg.content;
-            document.getElementById("game-message").style.color = "#ff4444";
-            addLog("System", "Error: " + msg.content);
-        } else if (msg.type === "ACTION") {
+        }
+        else if (msg.type === "ERROR") {
+            // Keep error inside chat too, maybe red?
+            const box = document.getElementById("chat-messages");
+            const div = document.createElement("div");
+            div.className = "msg system";
+            div.style.color = "#ff4444"; // Red text in chat
+            div.innerText = "❌ " + msg.content;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+        else if (msg.type === "INFO") {
+            // ✅ MINIMAL: Just add to chat with subtle gold color
+            const box = document.getElementById("chat-messages");
+            const div = document.createElement("div");
+            div.className = "msg info";
+            div.innerText = msg.content;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+        else if (msg.type === "ACTION") {
             addLog("Action (" + msg.sender + ")", msg.content);
-        } else if (msg.type === "FINISH") {
+        }
+        else if (msg.type === "FINISH") {
             showGameOver(msg.sender, msg.content);
-        } else if (msg.type === "WAITING_FOR_RESPONSE") {
-            document.getElementById("game-message").innerText = "⚠️ " + msg.content;
-            document.getElementById("game-message").style.color = "#ffd700";
-        } else if (msg.type === "CHOOSE") {
-            document.getElementById("game-message").innerText = "👉 " + msg.content;
-            document.getElementById("game-message").style.color = "#0f0";
+        }
+        else if (msg.type === "WAITING_FOR_RESPONSE") {
+            // Reuse INFO style for these status updates
+            const box = document.getElementById("chat-messages");
+            const div = document.createElement("div");
+            div.className = "msg info";
+            div.innerText = "⚠️ " + msg.content;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+        else if (msg.type === "CHOOSE") {
+            const box = document.getElementById("chat-messages");
+            const div = document.createElement("div");
+            div.className = "msg info";
+            div.style.color = "#4CAF50"; // Green for "Your Turn"
+            div.innerText = "👉 " + msg.content;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
     }
 
-    function showGameOver(winnerName, asciiContent) {
+    function showGameOver(winner, board) {
         document.getElementById("game-over-modal").classList.remove("hidden");
-        document.getElementById("game-result-title").innerText = "🏆 WINNER: " + winnerName + " 🏆";
-        document.getElementById("final-board-display").innerText = asciiContent;
-        document.getElementById("connection-status").classList.remove("connected");
-        document.getElementById("room-display").innerText = "GAME OVER";
+        document.getElementById("game-result-title").innerText = "🏆 WINNER: " + winner + " 🏆";
+        document.getElementById("final-board-display").innerText = board;
     }
 
-    // --- SENDING ---
+    function updateUIForAction() {
+        const action = document.getElementById("action-type").value;
+        const posContainer = document.getElementById("target-pos-container");
+        const specContainer = document.getElementById("spec-container");
+
+        clearSelections();
+
+        if (action === "SPAWN") {
+            posContainer.style.display = "none";
+            specContainer.style.display = "none";
+        } else if (action === "EVOLVE") {
+            posContainer.style.display = "none";
+            specContainer.style.display = "block";
+        } else if (action === "ATTACK_AND_CAPTURE") {
+            posContainer.style.display = "block";
+            specContainer.style.display = "none";
+        }
+    }
+
+    function clearSelections() {
+        document.getElementById("selected-dest-pos").value = "";
+        document.getElementById("selected-spec").value = "";
+        document.querySelectorAll(".selectable button").forEach(btn => btn.classList.remove("active"));
+    }
+
+    function toggleSelection(val, type) {
+        let input, bar;
+        if (type === 'pos') {
+            input = document.getElementById("selected-dest-pos");
+            bar = document.getElementById("action-pos-bar");
+        } else {
+            input = document.getElementById("selected-spec");
+            bar = document.getElementById("spec-bar");
+        }
+
+        if (input.value === val.toString()) {
+            input.value = "";
+            Array.from(bar.children).forEach(btn => btn.classList.remove("active"));
+        } else {
+            input.value = val;
+            Array.from(bar.children).forEach(btn => {
+                btn.classList.remove("active");
+                if(btn.innerText.trim() === val.toString()) btn.classList.add("active");
+            });
+        }
+    }
+
+    function sendNumberPayload(val) {
+        ws.send(JSON.stringify({ type: "GAME", payload: { type: "CHOOSE", content: val.toString() } }));
+        console.log("Pick:", val);
+    }
+
+    function sendActionPayload() {
+        const action = document.getElementById("action-type").value;
+        const dest = document.getElementById("selected-dest-pos").value;
+        const spec = document.getElementById("selected-spec").value;
+
+        const payload = {
+            gameAction: action,
+            sourcePosition: -1,
+            destinationPosition: dest !== "" ? parseInt(dest) : null,
+            specialization: spec !== "" ? spec : null
+        };
+
+        ws.send(JSON.stringify({ type: "ACTION", payload: payload }));
+        console.log("Action:", action, payload);
+    }
+
     function sendChat() {
         const input = document.getElementById("chat-input");
         const text = input.value.trim();
@@ -383,33 +527,7 @@
         addLog("You", text, true);
         input.value = "";
     }
-
     function handleChatKey(e) { if (e.key === 'Enter') sendChat(); }
-
-    function sendNumberPayload() {
-        const num = document.getElementById("game-number").value;
-        if (num === "") return;
-        ws.send(JSON.stringify({ type: "GAME", payload: { type: "CHOOSE", content: num.toString() } }));
-        console.log("Sent Number:", num);
-        document.getElementById("game-number").value = "";
-    }
-
-    function sendActionPayload() {
-        const action = document.getElementById("action-type").value;
-        const dest = document.getElementById("dest-pos").value;
-        const spec = document.getElementById("specialization").value;
-
-        const payload = {
-            gameAction: action,
-            sourcePosition: -1,
-            destinationPosition: dest ? parseInt(dest) : -1,
-            specialization: spec || null
-        };
-
-        ws.send(JSON.stringify({ type: "ACTION", payload: payload }));
-        console.log("Sent Action:", action);
-        document.getElementById("dest-pos").value = "";
-    }
 
     function addLog(sender, text, isSelf = false) {
         const box = document.getElementById("chat-messages");

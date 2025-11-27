@@ -24,13 +24,22 @@ public class GameRendererService {
 
         // Truncate variable fields to prevent layout breaking
         String safeRoom = truncate(gameState.getRoomId(), 12);
+
+        // --- NEW LOGIC: Action vs Picker ---
+        String turnLabel;
         String safePlayer = truncate(gameState.getCurrentPlayerId() != null ? gameState.getCurrentPlayerId() : "-", 10);
 
-        String info = String.format("Room: %s  Mode: %s  Status: %s  Turn: %s",
+        if (gameState.isActionPending()) {
+            turnLabel = "Action: " + safePlayer;
+        } else {
+            turnLabel = "Picker: " + safePlayer;
+        }
+
+        String info = String.format("Room: %s  Mode: %s  Status: %s  %s",
                 safeRoom,
                 gameState.getGameMode(),
                 gameState.getStatus(),
-                safePlayer);
+                turnLabel);
 
         sb.append(centerLine(info, WIDTH)).append("\n");
         sb.append("╚").append(H_BORDER).append("╝\n\n");

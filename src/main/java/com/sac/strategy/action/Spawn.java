@@ -6,6 +6,7 @@ import com.sac.model.Position;
 import com.sac.model.actor.Actor;
 import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.util.MessageFormat;
@@ -50,7 +51,7 @@ public class Spawn implements Action {
             return false;
         } else if (position.getActor() != null) {
             String errorMsg = "An actor already present in this position, choose different action";
-            messageService.sendToSender(webSocketSession, errorMsg);
+            messageService.sendToSender(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
             return false;
         }
         return true;

@@ -12,43 +12,104 @@ public class MessageFormat {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    public static String systemInfo(String message) {
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.INFO, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
+    }
+
+    public static String systemError(String message) {
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.ERROR, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
+    }
+
     public static String chooseMessage(String username) {
-        return String.format("%s will choose the position now", username);
+        String message = String.format("%s will choose the position now", username);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.INFO, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String noActorPresent(int position) {
-        return String.format("No actor present at %d", position);
+        String message = String.format("No actor present at %d", position);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.INFO, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String spawnSuccessAction(String username, int actionPerformedOn) {
-        return String.format("%s placed %s on position %d",
+        String message = String.format("%s placed %s on position %d",
                 username, Specialization.NOVICE.name(), actionPerformedOn);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.INFO, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String illegalAction() {
-        return "You cannot perform action at this state";
+        String message = "You cannot perform action at this state";
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.ERROR, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String evolveSuccessAction(String username, int actionPerformedOn,
                                              Specialization from, Specialization to) {
-        return String.format("%s evolved position %d from %s to %s",
+        String message = String.format("%s evolved position %d from %s to %s",
                 username, actionPerformedOn, from, to);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.INFO, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String frozenTrouble(int positionId, Specialization specialization) {
-        return String.format("%s at %d is frozen", specialization, positionId);
+        String message = String.format("%s at %d is frozen", specialization, positionId);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.ERROR, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String capturedTrouble(String opponent, int positionId) {
-        return String.format("%s already captured this position %d", opponent, positionId);
+        String message = String.format("%s already captured this position %d", opponent, positionId);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.ERROR, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String actorCannotPerform(Specialization specialization, GameAction gameAction) {
-        return String.format("%s cannot perform this %s", specialization, gameAction);
+        String message = String.format("%s cannot perform this %s", specialization, gameAction);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.ERROR, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String capturePosition(String username, String opponent, int positionId) {
-        return String.format("%s captured %s's position - %d", username, opponent, positionId);
+        String message = String.format("%s captured %s's position - %d", username, opponent, positionId);
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(ServerResponse.Type.INFO, "System", message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
     }
 
     public static String gameState(GameState gameState) {
