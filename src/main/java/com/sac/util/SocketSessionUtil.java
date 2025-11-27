@@ -1,8 +1,6 @@
 package com.sac.util;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Objects;
@@ -22,20 +20,6 @@ public class SocketSessionUtil {
             }
         }
         return null;
-    }
-
-    public static void sendErrorAndClose(WebSocketSession session, String msg) throws Exception {
-        if (session.isOpen()) {
-            session.sendMessage(new TextMessage(msg));
-            session.close(CloseStatus.POLICY_VIOLATION);
-            log.info("{}'s session closed due to {}", session.getAttributes().get("username"), msg);
-        }
-    }
-
-    public static String setUserInSession(WebSocketSession webSocketSession) {
-        String username = getUserNameFromSession(webSocketSession);
-        webSocketSession.getAttributes().put("username", username);
-        return username;
     }
 
     public static String getUserNameFromSession(WebSocketSession webSocketSession) {

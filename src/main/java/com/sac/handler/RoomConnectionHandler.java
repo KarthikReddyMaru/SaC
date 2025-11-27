@@ -22,24 +22,31 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class RoomConnectionHandler extends TextWebSocketHandler {
 
+    private record UserSessionInfo(String roomId, String sessionId) {}
+
     private final EnvelopeHandlerRegistry envelopeHandlerRegistry;
     private final GameplayService gameplayService;
 
-    private final ConcurrentHashMap<String, String> sessionRoomMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, UserSessionInfo> sessionRoomMap = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession webSocketSession) throws Exception {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = gameplayService.tryJoin(webSocketSession);
-        sessionRoomMap.put(username, roomId);
+        if (roomId != null)
+            sessionRoomMap.put(username, new UserSessionInfo(roomId, webSocketSession.getId()));
     }
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession webSocketSession, @NonNull CloseStatus status) throws Exception {
+
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         log.info("{} arrived for removal, sessionRoomMap - {}", username, sessionRoomMap);
-        String roomId = sessionRoomMap.get(username);
-        if (roomId != null) {
+
+        UserSessionInfo sessionInfo = sessionRoomMap.get(username);
+        String roomId = sessionInfo.roomId();
+
+        if (sessionInfo.sessionId().equals(webSocketSession.getId())) {
             sessionRoomMap.remove(username);
             gameplayService.tryLeave(webSocketSession, roomId);
         }
@@ -49,14 +56,14 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession webSocketSession, @NonNull TextMessage message) throws Exception {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        String roomId = sessionRoomMap.get(username);
+        String roomId = sessionRoomMap.get(username).roomId();
         MessageEnvelope messageEnvelope = new ObjectMapper().readValue(message.asBytes(), MessageEnvelope.class);
         EnvelopeHandler envelopeHandler = envelopeHandlerRegistry.getInstance(messageEnvelope.getType());
         envelopeHandler.handle(webSocketSession, messageEnvelope, roomId);
     }
 
     @Override
-    public void handleTransportError(@NonNull WebSocketSession session, Throwable exception) throws Exception {
+    public void handleTransportError(@NonNull WebSocketSession session, Throwable exception) {
         String message = exception.getMessage();
         log.warn("Server stopped: {}", message);
     }

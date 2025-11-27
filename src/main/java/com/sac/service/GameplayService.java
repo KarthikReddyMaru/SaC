@@ -8,6 +8,7 @@ import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.ArrayList;
@@ -24,17 +25,16 @@ public class GameplayService {
     public String tryJoin(WebSocketSession webSocketSession) throws Exception {
         String roomId = SocketSessionUtil.getQueryParamValue(webSocketSession, "roomId");
         if (roomId == null || roomId.isEmpty()) {
-            SocketSessionUtil.sendErrorAndClose(webSocketSession, "Invalid RoomID");
-            throw new IllegalArgumentException();
+            webSocketSession.close(CloseStatus.NOT_ACCEPTABLE);
+            return null;
         }
         boolean isJoined = roomConnectionService.tryJoin(roomId, webSocketSession);
         if (!isJoined) {
-            SocketSessionUtil.sendErrorAndClose(webSocketSession, "Room is full");
-            throw new IllegalArgumentException();
+            webSocketSession.close(CloseStatus.NOT_ACCEPTABLE);
+            return null;
         }
-        String username = SocketSessionUtil.setUserInSession(webSocketSession);
         messageService.broadcastMessage(
-                String.format("%s is joined", username),
+                String.format("%s is joined", SocketSessionUtil.getUserNameFromSession(webSocketSession)),
                 roomId, ServerResponse.Type.INFO);
         GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
         tryInitializeGame(roomId, gameMode);

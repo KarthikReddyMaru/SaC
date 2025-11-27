@@ -26,21 +26,21 @@ public class RoomConnectionService {
     private int maxRoomSize;
 
     public boolean tryJoin(String roomId, WebSocketSession webSocketSession) throws Exception {
-        rooms.computeIfAbsent(roomId, (room) -> Collections.synchronizedSet(new HashSet<>()));
-        int currRoomSize = rooms.get(roomId).size();
+        int currRoomSize = rooms.getOrDefault(roomId, Collections.emptySet()).size();
         if (currRoomSize == maxRoomSize) return false;
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        addUserToRoom(roomId, webSocketSession, username);
-        return true;
+        return addUserToRoom(roomId, webSocketSession, username);
     }
 
-    private void addUserToRoom(String roomId, WebSocketSession webSocketSession, String username) throws Exception {
+    private boolean addUserToRoom(String roomId, WebSocketSession webSocketSession, String username) throws Exception {
         WebSocketSession existing = userRegistry.putIfAbsent(username, webSocketSession);
         if (existing != null) {
-            SocketSessionUtil.sendErrorAndClose(webSocketSession, "Username exists!!!");
-            throw new IllegalArgumentException();
+            webSocketSession.close(CloseStatus.POLICY_VIOLATION);
+            return false;
         }
+        rooms.computeIfAbsent(roomId, (room) -> Collections.synchronizedSet(new HashSet<>()));
         rooms.get(roomId).add(username);
+        return true;
     }
 
     public boolean tryRemove(String roomId, String username) throws Exception {
