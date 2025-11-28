@@ -30,31 +30,37 @@ public class Spawn implements Action {
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        GameState gameState = gameStateService.getGameState(roomId);
-        int playerPositionId = gameState.getActionPendingOn();
-        if (playerPositionId == -1) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
-        Position position = gameStateService.getPlayerPosition(roomId, username, playerPositionId);
-        if (preProcessChecks(webSocketSession, username, gameState, position)) {
+        if (preProcessChecks(webSocketSession, username, roomId)) {
+            GameState gameState = gameStateService.getGameState(roomId);
+            Integer playerPositionId = gameState.getActionPendingOn();
+            Position position = gameStateService.getPlayerPosition(roomId, username, playerPositionId);
             Actor actor = ActorFactory.getInstance(Specialization.NOVICE);
             position.setActor(actor);
-            messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()), roomId);
-            gameState.setActionPending(false);
-            gameState.setActionPendingOn(-1);
-            messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
+            postProcessAction(roomId, username, gameState);
         }
     }
 
-    public boolean preProcessChecks(WebSocketSession webSocketSession, String username,
-                                     GameState gameState, Position position) {
-        if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+    private boolean preProcessChecks(WebSocketSession webSocketSession, String username, String roomId) {
+        GameState gameState = gameStateService.getGameState(roomId);
+        if (gameState.getActionPendingOn() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
-        } else if (position.getActor() != null) {
+        } else if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        } else if (gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn()).getActor() != null) {
             String errorMsg = "An actor already present in this position, choose different action";
             messageService.sendToSender(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
             return false;
         }
         return true;
+    }
+
+    private void postProcessAction(String roomId, String username, GameState gameState) {
+        messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()), roomId);
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(null);
+        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
     }
 
     @Override

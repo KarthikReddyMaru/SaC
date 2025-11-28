@@ -31,45 +31,40 @@ public class Evolve implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-        GameState gameState = gameStateService.getGameState(roomId);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        if (gameState.getActionPendingOn() == -1) { messageService.sendToSender(webSocketSession, MessageFormat.illegalAction()); return; };
-        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
         Specialization requestedTransition = actionContext.getSpecialization();
-        if (preProcessChecks(webSocketSession, username, gameState, position, requestedTransition)) {
+        if (preProcessChecks(webSocketSession, username, roomId, requestedTransition)) {
+            GameState gameState = gameStateService.getGameState(roomId);
+            Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
             int actionPerformingOn = gameState.getActionPendingOn();
-            Specialization from = position.getActor().getCurrentState();
             position.setActor(ActorFactory.getInstance(requestedTransition));
             gameStateService.getPlayer(roomId, username).addPoints(pointsForSuccessfulAction());
-            messageService.broadcastMessage(
-                    MessageFormat.evolveSuccessAction(username, actionPerformingOn, from, requestedTransition),
-                    roomId);
-            gameState.setActionPending(false);
-            gameState.setActionPendingOn(-1);
-            messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
+            postProcessAction(roomId, username, actionPerformingOn, position.getActor().getCurrentState(),
+                    requestedTransition, gameState);
         }
     }
 
-    public boolean preProcessChecks(WebSocketSession webSocketSession, String username,
-                                    GameState gameState, Position position, Specialization requestedTransition) {
-        if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+    private boolean preProcessChecks(WebSocketSession webSocketSession, String username,
+                                    String roomId, Specialization requestedTransition) {
+
+        GameState gameState = gameStateService.getGameState(roomId);
+        if (gameState.getActionPendingOn() == null) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        } else if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
         }
+
+        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
         Actor actor = position.getActor();
         if (actor == null) {
             messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
             return false;
-        }
-        else if (actor.isFrozen()) {
-            messageService.sendToSender(webSocketSession, "UNFREEZE actor before EVOLVE", ServerResponse.Type.ERROR);
-            return false;
-        }
-        else if (requestedTransition == null) {
+        } else if (requestedTransition == null) {
             messageService.sendToSender(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
             return false;
-        }
-        else if (!actor.getAllowedTransitions().contains(requestedTransition) || actor.getCurrentState().equals(requestedTransition)) {
+        } else if (!actor.getAllowedTransitions().contains(requestedTransition) || actor.getCurrentState().equals(requestedTransition)) {
             String errorMessage = String.format("%s cannot EVOLVE to %s",
                     actor.getCurrentState(), requestedTransition);
             messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
@@ -77,6 +72,17 @@ public class Evolve implements Action {
         }
         return true;
     }
+
+    private void postProcessAction(String roomId, String username, int actionPerformingOn,
+                                   Specialization from, Specialization requestedTransition, GameState gameState) {
+        messageService.broadcastMessage(
+                MessageFormat.evolveSuccessAction(username, actionPerformingOn, from, requestedTransition),
+                roomId);
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(null);
+        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
+    }
+
 
     @Override
     public int pointsForSuccessfulAction() {

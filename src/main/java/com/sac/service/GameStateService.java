@@ -26,7 +26,7 @@ public class GameStateService {
                     .players(initializePlayers(players))
                     .currentPlayerId(players.getFirst())
                     .actionPending(false)
-                    .actionPendingOn(-1)
+                    .actionPendingOn(null)
                     .status(GameState.Status.PLAYING)
                     .gameMode(gameMode)
                     .playerCount(players.size())

@@ -22,7 +22,7 @@ public class Position {
     public void setActor(Actor actor) {
         if (!this.isCapturedByOpponent) {
             positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, false));
-            this.actor = actor.withFrozen(actor.isFrozen());
+            this.actor = actor.copy();
         }
     }
 
@@ -35,7 +35,7 @@ public class Position {
 
     public void buildFrom(Position position) {
         positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, this.isCapturedByOpponent));
-        this.actor = position.getActor().withFrozen(position.getActor().isFrozen());
+        this.actor = position.getActor().copy();
         this.belongsTo = position.getBelongsTo();
         this.isCapturedByOpponent = position.isCapturedByOpponent;
     }

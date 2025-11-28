@@ -25,7 +25,11 @@ public class Points implements Mode {
         Player winner = players.stream()
                 .filter(player -> player.getPoints() >= pointsToReach)
                 .findFirst().orElse(null);
-        return winner != null ? winner.getUsername() : null;
+        if (winner != null) {
+            gameState.setStatus(GameState.Status.FINISHED);
+            return winner.getUsername();
+        }
+        return null;
     }
 
     @Override

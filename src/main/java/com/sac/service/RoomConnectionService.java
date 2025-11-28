@@ -64,7 +64,6 @@ public class RoomConnectionService {
         return true;
     }
 
-
     public Set<WebSocketSession> getSessions(String roomId) {
         return rooms.getOrDefault(roomId, Collections.emptySet())
                 .stream()

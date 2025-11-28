@@ -15,7 +15,7 @@ public class GameState {
     private int playerCount;
     private String currentPlayerId;
     private boolean actionPending;
-    private int actionPendingOn;
+    private Integer actionPendingOn;
     private Status status;
     private GameMode gameMode;
     private int totalMovesPlayed;
@@ -35,5 +35,26 @@ public class GameState {
         public void addPoints(int points) {
             this.points += points;
         }
+    }
+
+    public Position getPlayerPosition(String username, int position) {
+        return this
+                .getPlayers()
+                .stream()
+                .filter(player -> player.getUsername().equals(username))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new)
+                .getPositions()[position];
+    }
+
+
+    public Position getOpponentPosition(String username, int position) {
+        return this
+                .getPlayers()
+                .stream()
+                .filter(player -> !player.getUsername().equals(username))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new)
+                .getPositions()[position];
     }
 }

@@ -26,9 +26,7 @@ public class Fighter extends Actor {
     }
 
     @Override
-    public Actor withFrozen(boolean isFrozon) {
-        return this.toBuilder()
-                .isFrozen(isFrozen)
-                .build();
+    public Actor copy() {
+        return this.toBuilder().build();
     }
 }

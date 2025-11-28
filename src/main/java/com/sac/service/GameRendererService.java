@@ -10,9 +10,10 @@ public class GameRendererService {
 
     private static final int WIDTH = 62;
     private static final String H_BORDER = "═".repeat(WIDTH - 2);
-    private static final String GAP = "                ";
+    private static final String GRID_GAP = "                "; // 16 spaces
+    private static final String GRID_MARGIN = "          ";    // 10 spaces
 
-    private GameRendererService() {} // Prevent instantiation
+    private GameRendererService() {}
 
     public static String render(GameState gameState) {
         StringBuilder sb = new StringBuilder();
@@ -22,13 +23,10 @@ public class GameRendererService {
         sb.append(centerLine("SaC ARENA", WIDTH)).append("\n");
         sb.append("╠").append(H_BORDER).append("╣\n");
 
-        // Truncate variable fields to prevent layout breaking
         String safeRoom = truncate(gameState.getRoomId(), 12);
-
-        // --- NEW LOGIC: Action vs Picker ---
-        String turnLabel;
         String safePlayer = truncate(gameState.getCurrentPlayerId() != null ? gameState.getCurrentPlayerId() : "-", 10);
 
+        String turnLabel;
         if (gameState.isActionPending()) {
             turnLabel = "Action: " + safePlayer;
         } else {
@@ -57,12 +55,14 @@ public class GameRendererService {
         String p1Header = truncate(p1.getUsername(), 10) + " (P1)";
         String p2Header = truncate(p2.getUsername(), 10) + " (P2)";
 
-        sb.append("        ").append(padRight(p1Header, 13))
-                .append(GAP)
-                .append(padRight(p2Header, 13)).append("\n");
+        sb.append(GRID_MARGIN)
+                .append(centerText(p1Header, 13))
+                .append(GRID_GAP)
+                .append(centerText(p2Header, 13))
+                .append("\n");
 
         // Grid Top
-        sb.append("      ┌───────────┐").append(GAP).append("┌───────────┐\n");
+        sb.append(GRID_MARGIN).append("┌───────────┐").append(GRID_GAP).append("┌───────────┐\n");
 
         int maxRows = Math.max(
                 p1.getPositions() != null ? p1.getPositions().length : 0,
@@ -74,18 +74,20 @@ public class GameRendererService {
             String cell1 = renderCellContent(p1.getPositions(), i);
             String cell2 = renderCellContent(p2.getPositions(), i);
 
-            sb.append("      │ ").append(centerText(cell1, 9)).append(" │")
-                    .append(GAP)
+            sb.append(GRID_MARGIN)
+                    .append("│ ").append(centerText(cell1, 9)).append(" │")
+                    .append(GRID_GAP)
                     .append("│ ").append(centerText(cell2, 9)).append(" │\n");
 
             if (i < maxRows - 1) {
-                sb.append("      ├───────────┤").append(GAP).append("├───────────┤\n");
+                sb.append(GRID_MARGIN).append("├───────────┤").append(GRID_GAP).append("├───────────┤\n");
             }
         }
-        sb.append("      └───────────┘").append(GAP).append("└───────────┘\n\n");
+        sb.append(GRID_MARGIN).append("└───────────┘").append(GRID_GAP).append("└───────────┘\n\n");
 
         // --- FOOTER ---
         sb.append("╔").append(H_BORDER).append("╗\n");
+
         String stats = String.format(" %s : %d pts                  %s : %d pts ",
                 truncate(p1.getUsername(), 10), p1.getPoints(),
                 truncate(p2.getUsername(), 10), p2.getPoints());
@@ -93,9 +95,17 @@ public class GameRendererService {
         sb.append(centerLine(stats, WIDTH)).append("\n");
         sb.append("╚").append(H_BORDER).append("╝\n");
 
-        // --- LEGEND ---
-        sb.append("   [N] Novice   [F] Fighter   [W] Wizard   [H] Healer\n");
-        sb.append("   [+] Frozen   [X] Captured  [.] Empty\n");
+        // --- LEGEND (Fixed Alignment) ---
+        // Using fixed width columns to ensure items stack vertically
+        // Format: 3 spaces indent + 4 columns of 14 chars each
+        String row1 = String.format("   %-14s%-14s%-14s%-14s",
+                "[N] Novice", "[F] Fighter", "[W] Wizard", "[H] Healer");
+
+        String row2 = String.format("   %-14s%-14s",
+                "[X] Captured", "[.] Empty");
+
+        sb.append(row1).append("\n");
+        sb.append(row2).append("\n");
 
         return sb.toString();
     }
@@ -114,9 +124,7 @@ public class GameRendererService {
         if (actor == null) {
             return ".";
         }
-
-        String sym = getSymbol(actor.getCurrentState());
-        return actor.isFrozen() ? "+" + sym : sym;
+        return getSymbol(actor.getCurrentState());
     }
 
     private static String getSymbol(Specialization s) {
@@ -148,10 +156,6 @@ public class GameRendererService {
         String left = " ".repeat(padding);
         String right = " ".repeat(width - text.length() - padding);
         return left + text + right;
-    }
-
-    private static String padRight(String s, int n) {
-        return String.format("%-" + n + "s", s);
     }
 
     private static String truncate(String s, int maxLength) {

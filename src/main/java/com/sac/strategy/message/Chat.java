@@ -11,7 +11,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-public class DefaultMessageStrategy implements MessageHandlerStrategy {
+public class Chat implements MessageHandlerStrategy {
 
     private final MessageService messageService;
 

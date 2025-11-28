@@ -12,13 +12,8 @@ import java.util.Set;
 @SuperBuilder(toBuilder = true)
 public abstract class Actor {
 
-    @Builder.Default
-    protected boolean isFrozen = false;
-
-    public boolean canPerformAction() { return isFrozen; }
-
-    public abstract Actor withFrozen(boolean isFrozon);
     public abstract Set<Specialization> getAllowedTransitions();
     public abstract Set<GameAction> getAllowedActions();
     public abstract Specialization getCurrentState();
+    public abstract Actor copy();
 }

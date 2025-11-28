@@ -26,6 +26,7 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
 
     private final EnvelopeHandlerRegistry envelopeHandlerRegistry;
     private final GameplayService gameplayService;
+    private final ObjectMapper objectMapper;
 
     private final ConcurrentHashMap<String, UserSessionInfo> sessionRoomMap = new ConcurrentHashMap<>();
 
@@ -57,7 +58,7 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     protected void handleTextMessage(@NonNull WebSocketSession webSocketSession, @NonNull TextMessage message) throws Exception {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = sessionRoomMap.get(username).roomId();
-        MessageEnvelope messageEnvelope = new ObjectMapper().readValue(message.asBytes(), MessageEnvelope.class);
+        MessageEnvelope messageEnvelope = objectMapper.readValue(message.asBytes(), MessageEnvelope.class);
         EnvelopeHandler envelopeHandler = envelopeHandlerRegistry.getInstance(messageEnvelope.getType());
         envelopeHandler.handle(webSocketSession, messageEnvelope, roomId);
     }
