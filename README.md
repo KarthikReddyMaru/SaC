@@ -1,6 +1,6 @@
 # 🚀 SaC: Shoot and Capture
 
-A strategic 2-player turn-based game of prediction, evolution, and tactical warfare.
+A strategic 2-player turn-based game of prediction, tactics, and evolution.
 
 ## 📜 Game Rules
 
@@ -14,20 +14,27 @@ The game operates on a unique **Pick & Guess** system:
 
 ### 🔄 Turn Outcomes
 - **✅ Correct Guess:**
-    - The turn flips immediately. The Guesser becomes the new Picker.
+  - The turn flips immediately. The Guesser becomes the new Picker.
+  - **Scoring:** The Guesser earns points based on the *Picker's Army Size* at that position.
+    - **Formula:** `(Army Size) x (Unit Multiplier)`
+    - **Multipliers:** Novice (1x) | Fighter (1.5x)
 
 - **❌ Wrong Guess:**
-    - The Picker gets a free tactical move on their chosen position.
-    - **Action Constraint:** If the picked position is already **Captured** by the enemy, the Picker cannot act. The turn flips to the opponent to prevent wasted moves.
+  - The Picker earns a **Tactical Action** on their chosen position.
+  - **Foul Move Penalty:** If the Picker selects a position that is already **Captured** by the enemy, they commit a Foul.
+    - **Penalty:** -1 Point.
+    - The turn flips to the opponent immediately.
 
-### ⚔️ Actions & Scoring
-If the Guesser fails, the Picker performs one of these actions on the chosen position:
+### ⚔️ Tactical Actions & Scoring
+If the Guesser fails, the Picker performs one of these actions on their chosen position.
+*Note: Points are only awarded for aggressive plays (Kamikaze & Attack).*
 
 | Action | Description | Points Awarded |
 | :--- | :--- | :---: |
 | **SPAWN** | Place a generic Novice unit on an empty spot. | **0** |
-| **EVOLVE** | Upgrade a Novice to a specialized unit (Fighter). | **+1** |
+| **EVOLVE** | Upgrade a Novice to a specialized unit (Fighter). | **0** |
 | **ATTACK** | Capture an enemy position using a Fighter unit. | **+3** |
+| **KAMIKAZE** | Sacrifice a Novice unit to destroy an enemy. | **+1** |
 
 ---
 *Built with Java Spring Boot & WebSockets.*
