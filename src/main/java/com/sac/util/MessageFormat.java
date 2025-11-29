@@ -71,6 +71,19 @@ public class MessageFormat {
         return createJson(Type.INFO, message);
     }
 
+    public static String kamikazeSuccessAction(String username, String opponent, int opponentPosition) {
+        String message = String.format("%s hit position %d, but %s was unaffected",
+                username, opponentPosition, opponent);
+        return createJson(Type.INFO, message);
+    }
+
+    public static String kamikazeSuccessActionWithDegradation(String username, int opponentPositionId,
+                                                              Specialization from, Specialization to) {
+        String message = String.format("%s hit position %d, degrading %s to %s",
+                username, opponentPositionId, from.toString().toLowerCase(), to.toString().toLowerCase());
+        return createJson(Type.INFO, message);
+    }
+
     public static String captureSuccessAction(String username, String opponent, int positionId) {
         String message = String.format("%s captured pos %d from %s", username, positionId, opponent);
         return createJson(Type.INFO, message);
@@ -82,6 +95,11 @@ public class MessageFormat {
 
     public static String illegalAction() {
         String message = "Action unavailable";
+        return createJson(Type.ERROR, message);
+    }
+
+    public static String noDestinationProvided() {
+        String message = "Please choose a destination";
         return createJson(Type.ERROR, message);
     }
 
@@ -97,6 +115,11 @@ public class MessageFormat {
 
     public static String actorCannotPerform(Specialization specialization, GameAction gameAction) {
         String message = String.format("Incompatible: %s cannot use %s.", specialization, gameAction);
+        return createJson(Type.ERROR, message);
+    }
+
+    public static String foulMessage(String username) {
+        String message = String.format("%s committed a foul! (-1 Score)", username);
         return createJson(Type.ERROR, message);
     }
 

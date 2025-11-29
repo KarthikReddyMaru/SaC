@@ -20,7 +20,7 @@ public class PointsService {
             Specialization.NOVICE, 1f,
             Specialization.FIGHTER, 1.5f);
 
-    public int computePoints(String roomId, int guessedPosition, String playerId) {
+    public int computeGuessPoints(String roomId, int guessedPosition, String playerId) {
         Player player = gameStateService.getPlayer(roomId, playerId);
         Position position = player.getPositions()[guessedPosition];
         Actor actorInCapturedPosition = position.getActor();
@@ -39,7 +39,7 @@ public class PointsService {
 
     public void foulMove(String roomId, String username) {
         Player player = gameStateService.getPlayer(roomId, username);
-        int points = Math.min(player.getPoints() - 1, 0);
+        int points = Math.max(player.getPoints() - 1, 0);
         player.setPoints(points);
     }
 

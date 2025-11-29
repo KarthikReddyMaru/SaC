@@ -30,7 +30,7 @@ public class Spawn implements Action {
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        if (preProcessChecks(webSocketSession, username, roomId)) {
+        if (preProcessAction(webSocketSession, username, roomId)) {
             GameState gameState = gameStateService.getGameState(roomId);
             Integer playerPositionId = gameState.getActionPendingOn();
             Position position = gameStateService.getPlayerPosition(roomId, username, playerPositionId);
@@ -40,7 +40,7 @@ public class Spawn implements Action {
         }
     }
 
-    private boolean preProcessChecks(WebSocketSession webSocketSession, String username, String roomId) {
+    private boolean preProcessAction(WebSocketSession webSocketSession, String username, String roomId) {
         GameState gameState = gameStateService.getGameState(roomId);
         if (gameState.getActionPendingOn() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());

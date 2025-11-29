@@ -35,7 +35,7 @@ public class AttackAndCapture implements Action {
         Integer playerPositionId = gameState.getActionPendingOn();
         Integer opponentPositionId = actionContext.getDestinationPosition();
 
-        if (preProcessChecks(webSocketSession, playerUserName, gameState, playerPositionId, opponentPositionId)) {
+        if (preProcessAction(webSocketSession, playerUserName, gameState, playerPositionId, opponentPositionId)) {
             String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
             Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
             opponentPosition.capturePosition(playerUserName);
@@ -43,7 +43,7 @@ public class AttackAndCapture implements Action {
         }
     }
 
-    public boolean preProcessChecks(WebSocketSession webSocketSession, String playerName,
+    public boolean preProcessAction(WebSocketSession webSocketSession, String playerName,
                                     GameState gameState, Integer playerPositionId, Integer opponentPositionId) {
 
         if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(playerName)) {
@@ -64,22 +64,20 @@ public class AttackAndCapture implements Action {
                     playerActor.getCurrentState(), getActionType()));
             return false;
         } else if (opponentPositionId == null) {
-            messageService.sendToSender(webSocketSession,
-                    "Pick a destination position to capture", ServerResponse.Type.ERROR);
+            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
             return false;
         } else if (gameState.getOpponentPosition(playerName, opponentPositionId).isCapturedByOpponent()) {
-            messageService.sendToSender(webSocketSession,
-                    "This position is already captured, try another position",
-                    ServerResponse.Type.ERROR);
+            messageService.sendToSender(webSocketSession, MessageFormat.capturedTrouble(playerName, opponentPositionId));
             return false;
         }
         return true;
     }
 
-    private void postProcessAction(String roomId, String playerUserName, String opponentUsername, Integer opponentPositionId, GameState gameState) {
+    private void postProcessAction(String roomId, String playerUserName, String opponentUsername,
+                                   Integer opponentPositionId, GameState gameState) {
         messageService.sendToSender(roomConnectionService.getUserRegistry().get(playerUserName),
                 MessageFormat.captureSuccessAction(playerUserName, opponentUsername, opponentPositionId));
-        gameStateService.getPlayer(roomId, playerUserName).addPoints(pointsForSuccessfulAction());
+        gameState.getPlayer(playerUserName).addPoints(pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         messageService.broadcastMessage(MessageFormat.chooseMessage(playerUserName), roomId);

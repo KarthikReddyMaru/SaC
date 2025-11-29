@@ -22,7 +22,7 @@ public class Position {
     public void setActor(Actor actor) {
         if (!this.isCapturedByOpponent) {
             positionCareTaker.saveMemento(new PositionMemento(this.actor, this.belongsTo, false));
-            this.actor = actor.copy();
+            this.actor = actor != null ? actor.copy() : null;
         }
     }
 

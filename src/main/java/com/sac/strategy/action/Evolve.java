@@ -33,7 +33,7 @@ public class Evolve implements Action {
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         Specialization requestedTransition = actionContext.getSpecialization();
-        if (preProcessChecks(webSocketSession, username, roomId, requestedTransition)) {
+        if (preProcessAction(webSocketSession, username, roomId, requestedTransition)) {
             GameState gameState = gameStateService.getGameState(roomId);
             Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
             int actionPerformingOn = gameState.getActionPendingOn();
@@ -43,8 +43,8 @@ public class Evolve implements Action {
         }
     }
 
-    private boolean preProcessChecks(WebSocketSession webSocketSession, String username,
-                                    String roomId, Specialization requestedTransition) {
+    private boolean preProcessAction(WebSocketSession webSocketSession, String username,
+                                     String roomId, Specialization requestedTransition) {
 
         GameState gameState = gameStateService.getGameState(roomId);
         if (gameState.getActionPendingOn() == null) {

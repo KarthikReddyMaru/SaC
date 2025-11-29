@@ -39,7 +39,7 @@ public class ChosenResponseService {
             }
         } else {
             gameStateService.setCurrentPlayerId(roomId, guessedPlayerId);
-            int pointsForOpponent = pointsService.computePoints(roomId, chosenPosition, chosenPlayerId);
+            int pointsForOpponent = pointsService.computeGuessPoints(roomId, chosenPosition, chosenPlayerId);
             pointsService.addPoints(roomId, guessedPlayerId, pointsForOpponent);
             messageService.broadcastMessage(
                     String.format("%s won, gear up to choose", guessedPlayerId),
@@ -54,6 +54,7 @@ public class ChosenResponseService {
         if (position.isCapturedByOpponent()) {
             messageService.broadcastMessage(
                     MessageFormat.capturedTrouble(position.getBelongsTo(), position.getPositionId()), roomId);
+            messageService.broadcastMessage(MessageFormat.foulMessage(username), roomId);
             return false;
         }
         return true;

@@ -612,6 +612,7 @@
                         <option value="SPAWN">SPAWN</option>
                         <option value="EVOLVE">EVOLVE</option>
                         <option value="ATTACK_AND_CAPTURE">ATTACK & CAPTURE</option>
+                        <option value="KAMIKAZE">KAMIKAZE (Sacrifice)</option>
                     </select>
 
                     <!-- Dynamic Controls: These toggle visibility based on Action Type -->
@@ -771,7 +772,7 @@
             ticker.removeChild(ticker.children[0]);
         }
 
-        // Auto-fade and remove after 2.5 seconds
+        // Auto-fade and remove after 4.0 seconds
         setTimeout(() => {
             if (div.parentNode === ticker) {
                 div.style.opacity = '0';
@@ -780,7 +781,7 @@
                     if (div.parentNode === ticker) ticker.removeChild(div);
                 }, 300);
             }
-        }, 2500);
+        }, 4000);
     }
 
     function updateTurnIndicator(isMyTurn) {
@@ -823,7 +824,7 @@
         } else if (action === "EVOLVE") {
             posContainer.style.display = "none";
             specContainer.style.display = "block";
-        } else if (action === "ATTACK_AND_CAPTURE") {
+        } else if (action === "ATTACK_AND_CAPTURE" || action === "KAMIKAZE") {
             posContainer.style.display = "block";
             specContainer.style.display = "none";
         }

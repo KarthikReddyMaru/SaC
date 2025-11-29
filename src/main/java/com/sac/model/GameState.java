@@ -57,4 +57,22 @@ public class GameState {
                 .orElseThrow(IllegalStateException::new)
                 .getPositions()[position];
     }
+
+    public Player getPlayer(String username) {
+        return this
+                .getPlayers()
+                .stream()
+                .filter(player -> player.getUsername().equals(username))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
+    }
+
+    public Player getOpponent(String username) {
+        return this
+                .getPlayers()
+                .stream()
+                .filter(player -> !player.getUsername().equals(username))
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
+    }
 }

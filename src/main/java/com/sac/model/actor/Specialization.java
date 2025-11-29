@@ -3,15 +3,17 @@ package com.sac.model.actor;
 import java.util.Arrays;
 
 public enum Specialization {
-    NOVICE("Base actor"),
-    FIGHTER("Can assault and seize a position in a single move"),
-    WIZARD("Can exchange one character between allied and enemy forces"),
-    HEALER("Can revert one position to its previous state");
+    NOVICE("Base actor", 1),
+    FIGHTER("Can assault and seize a position in a single move", 2),
+    WIZARD("Can exchange one character between allied and enemy forces", 2),
+    HEALER("Can revert one position to its previous state", 2);
 
-    final String description;
+    public final String description;
+    public final int level;
 
-    Specialization(String description) {
+    Specialization(String description, int level) {
         this.description = description;
+        this.level = level;
     }
 
     public static Specialization fromString(String type) {
