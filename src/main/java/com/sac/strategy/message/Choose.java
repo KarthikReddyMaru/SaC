@@ -51,6 +51,7 @@ public class Choose implements MessageHandlerStrategy {
             } else {
                 respondedPlayers.put(respondedPlayerId, Integer.parseInt(message.getContent()));
                 messageService.sendToSender(webSocketSession, "Your response is recorded as " + message.getContent());
+                messageService.sendMessage(webSocketSession, MessageFormat.chosenResponseMessage(respondedPlayerId), roomId);
                 int totalPlayersInTheRoom = gameState.getPlayerCount();
                 if (totalPlayersInTheRoom == respondedPlayers.size())
                     chosenResponseService.processChosenResponses(roomId, gameState, respondedPlayers);

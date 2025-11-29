@@ -20,26 +20,15 @@ public class GameRendererService {
 
         // --- HEADER ---
         sb.append("╔").append(H_BORDER).append("╗\n");
-        sb.append(centerLine("SaC ARENA", WIDTH)).append("\n");
+        sb.append(centerLine("SaC ARENA")).append("\n");
         sb.append("╠").append(H_BORDER).append("╣\n");
 
         String safeRoom = truncate(gameState.getRoomId(), 12);
         String safePlayer = truncate(gameState.getCurrentPlayerId() != null ? gameState.getCurrentPlayerId() : "-", 10);
 
-        String turnLabel;
-        if (gameState.isActionPending()) {
-            turnLabel = "Action: " + safePlayer;
-        } else {
-            turnLabel = "Picker: " + safePlayer;
-        }
+        String info = getInfo(gameState, safePlayer, safeRoom);
 
-        String info = String.format("Room: %s  Mode: %s  Status: %s  %s",
-                safeRoom,
-                gameState.getGameMode(),
-                gameState.getStatus(),
-                turnLabel);
-
-        sb.append(centerLine(info, WIDTH)).append("\n");
+        sb.append(centerLine(info)).append("\n");
         sb.append("╚").append(H_BORDER).append("╝\n\n");
 
         // --- PLAYERS & BOARD ---
@@ -92,12 +81,10 @@ public class GameRendererService {
                 truncate(p1.getUsername(), 10), p1.getPoints(),
                 truncate(p2.getUsername(), 10), p2.getPoints());
 
-        sb.append(centerLine(stats, WIDTH)).append("\n");
+        sb.append(centerLine(stats)).append("\n");
         sb.append("╚").append(H_BORDER).append("╝\n");
 
-        // --- LEGEND (Fixed Alignment) ---
-        // Using fixed width columns to ensure items stack vertically
-        // Format: 3 spaces indent + 4 columns of 14 chars each
+        // --- LEGEND ---
         String row1 = String.format("   %-14s%-14s%-14s%-14s",
                 "[N] Novice", "[F] Fighter", "[W] Wizard", "[H] Healer");
 
@@ -108,6 +95,24 @@ public class GameRendererService {
         sb.append(row2).append("\n");
 
         return sb.toString();
+    }
+
+    private static String getInfo(GameState gameState, String safePlayer, String safeRoom) {
+        String turnLabel;
+        if (gameState.isActionPending()) {
+            // UPDATED: Include position of the pending action
+            Integer pos = gameState.getActionPendingOn();
+            String posStr = (pos != null) ? String.valueOf(pos) : "?";
+            turnLabel = String.format("Action [%s]: %s", posStr, safePlayer);
+        } else {
+            turnLabel = "Picker: " + safePlayer;
+        }
+
+        return String.format("Room: %s  Mode: %s  Status: %s  %s",
+                safeRoom,
+                gameState.getGameMode(),
+                gameState.getStatus(),
+                turnLabel);
     }
 
     // --- HELPER METHODS ---
@@ -138,8 +143,8 @@ public class GameRendererService {
         };
     }
 
-    private static String centerLine(String text, int totalWidth) {
-        int contentWidth = totalWidth - 2;
+    private static String centerLine(String text) {
+        int contentWidth = GameRendererService.WIDTH - 2;
         if (text.length() > contentWidth) {
             text = text.substring(0, contentWidth - 3) + "...";
         }

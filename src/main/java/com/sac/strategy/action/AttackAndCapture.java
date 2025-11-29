@@ -39,7 +39,6 @@ public class AttackAndCapture implements Action {
             String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
             Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
             opponentPosition.capturePosition(playerUserName);
-            gameStateService.getPlayer(roomId, playerUserName).addPoints(pointsForSuccessfulAction());
             postProcessAction(roomId, playerUserName, opponentUsername, opponentPositionId, gameState);
         }
     }
@@ -79,7 +78,8 @@ public class AttackAndCapture implements Action {
 
     private void postProcessAction(String roomId, String playerUserName, String opponentUsername, Integer opponentPositionId, GameState gameState) {
         messageService.sendToSender(roomConnectionService.getUserRegistry().get(playerUserName),
-                MessageFormat.capturePosition(playerUserName, opponentUsername, opponentPositionId));
+                MessageFormat.captureSuccessAction(playerUserName, opponentUsername, opponentPositionId));
+        gameStateService.getPlayer(roomId, playerUserName).addPoints(pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         messageService.broadcastMessage(MessageFormat.chooseMessage(playerUserName), roomId);

@@ -38,7 +38,6 @@ public class Evolve implements Action {
             Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
             int actionPerformingOn = gameState.getActionPendingOn();
             position.setActor(ActorFactory.getInstance(requestedTransition));
-            gameStateService.getPlayer(roomId, username).addPoints(pointsForSuccessfulAction());
             postProcessAction(roomId, username, actionPerformingOn, position.getActor().getCurrentState(),
                     requestedTransition, gameState);
         }
@@ -78,6 +77,7 @@ public class Evolve implements Action {
         messageService.broadcastMessage(
                 MessageFormat.evolveSuccessAction(username, actionPerformingOn, from, requestedTransition),
                 roomId);
+        gameStateService.getPlayer(roomId, username).addPoints(pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
@@ -86,6 +86,6 @@ public class Evolve implements Action {
 
     @Override
     public int pointsForSuccessfulAction() {
-        return 1;
+        return 0;
     }
 }

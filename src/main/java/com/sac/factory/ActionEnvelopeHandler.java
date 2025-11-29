@@ -9,6 +9,7 @@ import com.sac.service.GameStateService;
 import com.sac.service.GameplayService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Action;
+import com.sac.util.MessageFormat;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -32,7 +33,6 @@ public class ActionEnvelopeHandler implements EnvelopeHandler {
 
     @Override
     public void handle(WebSocketSession webSocketSession, MessageEnvelope messageEnvelope, String roomId) throws IOException {
-        // Clicking on action buttons before game init throwing exceptions, hence added check
         if (gameStateService.exists(roomId)) {
             ActionContext actionContext = objectMapper.treeToValue(messageEnvelope.getPayload(), ActionContext.class);
             Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
