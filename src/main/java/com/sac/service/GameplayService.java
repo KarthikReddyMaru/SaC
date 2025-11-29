@@ -8,6 +8,7 @@ import com.sac.strategy.mode.Mode;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -36,8 +37,10 @@ public class GameplayService {
             webSocketSession.close(CloseStatus.NOT_ACCEPTABLE);
             return null;
         }
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        log.info("{} is joined", username);
         messageService.broadcastMessage(
-                String.format("%s is joined", SocketSessionUtil.getUserNameFromSession(webSocketSession)),
+                String.format("%s is joined", username),
                 roomId, ServerResponse.Type.INFO);
         GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
         tryInitializeGame(roomId, gameMode);
@@ -46,15 +49,16 @@ public class GameplayService {
 
     public void tryLeave(WebSocketSession webSocketSession, String roomId) throws Exception {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        log.info("{} arrived for removal, GameState - {}", username, gameStateService.exists(roomId));
+        log.info("RoomId - {}, clearing gameState...", roomId);
         if (roomConnectionService.tryRemove(roomId, username))
             gameStateService.endGameState(roomId);
-        log.info("{} left, GameState - {}", username, gameStateService.exists(roomId));
+        log.info("RoomId - {}, GameState in memory - {}", roomId, gameStateService.exists(roomId));
     }
 
     private void tryInitializeGame(String roomId, GameMode gameMode) {
         if (roomConnectionService.isFull(roomId) && !gameStateService.exists(roomId)) {
             GameState gameState = gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)), gameMode);
+            log.info("GameState initialized");
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
             messageService.broadcastMessage(MessageFormat.chooseMessage(
                     gameStateService.getGameState(roomId).getCurrentPlayerId()),
@@ -62,6 +66,7 @@ public class GameplayService {
         }
     }
 
+    @SneakyThrows
     public void postProcessAction(WebSocketSession webSocketSession, String roomId) {
         GameState gameState = gameStateService.getGameState(roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
@@ -69,6 +74,8 @@ public class GameplayService {
         if (mode.computeWinner(roomId) != null) {
             String winner = SocketSessionUtil.getUserNameFromSession(webSocketSession);
             messageService.broadcastMessage(MessageFormat.endGameWithWinner(winner, gameState), roomId);
+            log.info("Game completed, preparing to close connections of room - {}", roomId);
+            webSocketSession.close(CloseStatus.NORMAL);
         }
     }
 }

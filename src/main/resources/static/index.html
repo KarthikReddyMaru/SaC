@@ -204,6 +204,16 @@
             letter-spacing: 1px;
         }
 
+        /* Online Counter Badge Style */
+        #online-status {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: var(--accent-color);
+            display: none; /* Hidden until data fetched */
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
         /* -----------------------------------------------------------
            4. FORM ELEMENTS (Inputs, Buttons)
            ----------------------------------------------------------- */
@@ -625,6 +635,11 @@
     <div class="login-right">
         <div class="login-box">
             <h2>ENTER THE ARENA</h2>
+            <!-- ONLINE PLAYERS BADGE: Displays real-time player count from backend -->
+            <div id="online-status">
+                🟢 <span id="player-count">0</span> Warriors Online
+            </div>
+
             <input type="text" id="username" placeholder="Username" autocomplete="off">
             <input type="text" id="roomId" placeholder="Room ID" autocomplete="off">
             <button onclick="connect()">JOIN GAME</button>
@@ -736,9 +751,47 @@
     let ws;
     let myUsername = "";
 
-    // Initialize UI state on load
+    // --- LOGIC UPDATE: GAME END FLAG ---
+    // This flag is used to distinguish between a "Valid Game Over" (sent by server)
+    // and an "Unexpected Disconnection" (socket closed without FINISH message).
+    let isGameEnded = false;
+
+    /**
+     * INITIALIZATION SEQUENCE
+     * 1. Initialize UI state
+     * 2. Fetch active player count from API
+     * 3. Set interval to keep count updated
+     */
     window.onload = function () {
         updateUIForAction();
+        fetchOnlineCount();
+
+        // Refresh count every 10 seconds to keep it live
+        setInterval(fetchOnlineCount, 10000);
+    }
+
+    /**
+     * FETCH ONLINE PLAYERS
+     * Hits the backend REST endpoint to get the current count of connected users.
+     */
+    function fetchOnlineCount() {
+        fetch('/online/players')
+            .then(response => response.json())
+            .then(count => {
+                const countSpan = document.getElementById("player-count");
+                const statusDiv = document.getElementById("online-status");
+
+                if (countSpan && statusDiv) {
+                    countSpan.innerText = count;
+                    // Only show the badge if the server successfully responds
+                    statusDiv.style.display = "block";
+                }
+            })
+            .catch(err => {
+                // Fail silently (hide the badge) if server is down
+                const statusDiv = document.getElementById("online-status");
+                if (statusDiv) statusDiv.style.display = "none";
+            });
     }
 
     /**
@@ -754,6 +807,9 @@
         }
 
         myUsername = user;
+        // Reset game ended flag for new session
+        isGameEnded = false;
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
         const url = `${protocol}//${host}/ws/room?roomId=${room}&username=${user}`;
@@ -785,10 +841,18 @@
             }
         };
 
+        // --- LOGIC UPDATE: ONCLOSE HANDLER ---
         ws.onclose = () => {
-            document.getElementById("turn-indicator").style.background = "#555";
-            alert("Connection Lost");
-            location.reload();
+            document.getElementById("turn-indicator").className = "turn-dot idle";
+            document.getElementById("turn-indicator").title = "Disconnected";
+
+            // Only show "Connection Lost" modal if the game was NOT marked as finished.
+            // If isGameEnded is true, it means we already showed the "Winner" modal,
+            // so we ignore the socket closing (which happens naturally after game end).
+            if (!isGameEnded) {
+                const currentBoard = document.getElementById("ascii-display").innerText;
+                showGameOver(null, currentBoard);
+            }
         };
     }
 
@@ -818,6 +882,11 @@
             addSystemMsg("⚡ " + msg.content, "important");
             updateTurnIndicator(true);
         } else if (msg.type === "FINISH") {
+            // --- LOGIC UPDATE: FINISH HANDLER ---
+            // Server explicitly told us the game is over.
+            // 1. Set flag to TRUE so onclose knows this was expected.
+            isGameEnded = true;
+            // 2. Show the proper Winner Modal
             showGameOver(msg.sender, msg.content);
         }
     }
@@ -963,10 +1032,26 @@
         if (e.key === 'Enter') sendChat();
     }
 
+    // --- LOGIC UPDATE: GAME OVER MODAL ---
+    // Refactored to handle both "Victory/Defeat" (Winner Name)
+    // and "Disconnect" (Null Winner) scenarios cleanly.
     function showGameOver(winner, board) {
         document.getElementById("game-over-modal").classList.remove("hidden");
-        document.getElementById("game-result-title").innerText = "🏆 WINNER: " + winner + " 🏆";
-        document.getElementById("final-board-display").innerText = board;
+        const titleElem = document.getElementById("game-result-title");
+        const boardElem = document.getElementById("final-board-display");
+
+        // Display whatever the last known board state was
+        boardElem.innerText = board || "No board state available";
+
+        if (winner) {
+            // Scenario A: Normal Game Finish (Server sent FINISH)
+            titleElem.innerText = "🏆 WINNER: " + winner + " 🏆";
+            titleElem.style.color = "var(--highlight)";
+        } else {
+            // Scenario B: Connection Lost (Socket closed unexpectedly)
+            titleElem.innerText = "🔌 CONNECTION LOST";
+            titleElem.style.color = "var(--danger-color)";
+        }
     }
 </script>
 </body>

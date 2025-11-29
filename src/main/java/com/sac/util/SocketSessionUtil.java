@@ -27,6 +27,11 @@ public class SocketSessionUtil {
         return username != null ? username : UUID.randomUUID().toString().substring(8);
     }
 
+    public static String getRoomIdFromSession(WebSocketSession webSocketSession) {
+        String roomId = getQueryParamValue(webSocketSession, "roomId");
+        return roomId != null ? roomId : "";
+    }
+
     public static String getGameMode(WebSocketSession webSocketSession) {
         return getQueryParamValue(webSocketSession, "mode");
     }

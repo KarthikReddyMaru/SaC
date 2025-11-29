@@ -42,16 +42,17 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(@NonNull WebSocketSession webSocketSession, @NonNull CloseStatus status) throws Exception {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        log.info("{} arrived for removal, sessionRoomMap - {}", username, sessionRoomMap);
-
         UserSessionInfo sessionInfo = sessionRoomMap.get(username);
         String roomId = sessionInfo.roomId();
+
+        log.info("{}'s connection lost", username);
 
         if (sessionInfo.sessionId().equals(webSocketSession.getId())) {
             sessionRoomMap.remove(username);
             gameplayService.tryLeave(webSocketSession, roomId);
         }
-        log.info("{} left, sessionRoomMap - {}", username, sessionRoomMap);
+
+        log.info("{}'s data cleared, details - {}", username, sessionRoomMap.getOrDefault(username, null));
     }
 
     @Override

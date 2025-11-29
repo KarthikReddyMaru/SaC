@@ -44,7 +44,7 @@ public class RoomConnectionService {
     }
 
     public boolean tryRemove(String roomId, String username) throws Exception {
-        log.info("{} arrived for removal, rooms - {}, userRegistry - {}", username, rooms, userRegistry);
+        log.info("Removing {}'s session, Players in room - {}", username, rooms.getOrDefault(roomId, Collections.emptySet()));
         Set<String> players = rooms.get(roomId);
         if (players == null) return false;
 
@@ -60,7 +60,9 @@ public class RoomConnectionService {
         }
 
         rooms.remove(roomId);
-        log.info("{} left, rooms - {}, userRegistry - {}", username, rooms, userRegistry);
+        log.info("{}'s session - {}, Room status - {}", username,
+                userRegistry.getOrDefault(username, null),
+                rooms.containsKey(roomId));
         return true;
     }
 

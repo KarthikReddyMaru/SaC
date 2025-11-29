@@ -45,7 +45,6 @@ public class ChosenResponseService {
                     String.format("%s won, gear up to choose", guessedPlayerId),
                     roomId, ServerResponse.Type.INFO);
         }
-        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         respondedPlayers.clear();
     }
 

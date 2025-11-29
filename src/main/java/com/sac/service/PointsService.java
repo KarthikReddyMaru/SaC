@@ -37,7 +37,8 @@ public class PointsService {
     public void addPoints(String roomId, String username, int points) {
         gameStateService.getPlayer(roomId, username)
                 .addPoints(points);
-        messageService.broadcastMessage(MessageFormat.successPointsMessage(username, points), roomId);
+        if (points != 0)
+            messageService.broadcastMessage(MessageFormat.successPointsMessage(username, points), roomId);
     }
 
     public void foulMove(String roomId, String username) {

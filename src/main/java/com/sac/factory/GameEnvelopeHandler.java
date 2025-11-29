@@ -6,6 +6,7 @@ import com.sac.model.message.MessageEnvelope;
 import com.sac.model.message.MessageEnvelope.Type;
 import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
+import com.sac.service.GameplayService;
 import com.sac.service.MessageService;
 import com.sac.strategy.message.MessageHandlerStrategy;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class GameEnvelopeHandler implements EnvelopeHandler {
     private final MessageHandlerRegistry messageHandlerRegistry;
     private final GameStateService gameStateService;
     private final MessageService messageService;
+    private final GameplayService gameplayService;
 
     @Override
     public Type getType() {
@@ -34,6 +36,8 @@ public class GameEnvelopeHandler implements EnvelopeHandler {
         if (gameStateService.exists(roomId) || defaultMessage.getType().equals(DefaultMessage.Type.CHAT)) {
             MessageHandlerStrategy handlerStrategy = messageHandlerRegistry.getInstance(defaultMessage.getType());
             handlerStrategy.handle(webSocketSession, defaultMessage, roomId);
+            if (gameStateService.exists(roomId))
+                gameplayService.postProcessAction(webSocketSession, roomId);
         } else
             messageService.sendToSender(webSocketSession, "Game not initialized yet", ServerResponse.Type.ERROR);
     }

@@ -1,5 +1,6 @@
 package com.sac.config;
 
+import com.sac.handler.LoggingWebSocketDecorator;
 import com.sac.handler.RoomConnectionHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(roomConnectionHandler, "/ws/room")
+        registry.addHandler(new LoggingWebSocketDecorator(roomConnectionHandler), "/ws/room")
                 .setAllowedOrigins("*");
     }
 }
