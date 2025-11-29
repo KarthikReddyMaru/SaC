@@ -118,7 +118,12 @@ public class MessageFormat {
         return createJson(Type.ERROR, message);
     }
 
-    public static String foulMessage(String username) {
+    public static String successPointsMessage(String username, int points) {
+        String message = String.format("%s scored! (+%d pts)", username, points);
+        return createJson(Type.INFO, message);
+    }
+
+    public static String foulPointsMessage(String username) {
         String message = String.format("%s committed a foul! (-1 Score)", username);
         return createJson(Type.ERROR, message);
     }

@@ -54,7 +54,6 @@ public class ChosenResponseService {
         if (position.isCapturedByOpponent()) {
             messageService.broadcastMessage(
                     MessageFormat.capturedTrouble(position.getBelongsTo(), position.getPositionId()), roomId);
-            messageService.broadcastMessage(MessageFormat.foulMessage(username), roomId);
             return false;
         }
         return true;

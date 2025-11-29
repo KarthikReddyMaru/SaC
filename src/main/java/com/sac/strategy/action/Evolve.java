@@ -9,6 +9,7 @@ import com.sac.model.message.ActionContext;
 import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
+import com.sac.service.PointsService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class Evolve implements Action {
 
     private final GameStateService gameStateService;
     private final MessageService messageService;
+    private final PointsService pointsService;
 
     @Override
     public GameAction getActionType() {
@@ -77,7 +79,7 @@ public class Evolve implements Action {
         messageService.broadcastMessage(
                 MessageFormat.evolveSuccessAction(username, actionPerformingOn, from, requestedTransition),
                 roomId);
-        gameStateService.getPlayer(roomId, username).addPoints(pointsForSuccessfulAction());
+        pointsService.addPoints(roomId, username, pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);

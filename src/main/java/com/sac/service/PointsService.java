@@ -4,6 +4,7 @@ import com.sac.model.GameState.Player;
 import com.sac.model.Position;
 import com.sac.model.actor.Actor;
 import com.sac.model.actor.Specialization;
+import com.sac.util.MessageFormat;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,7 @@ import java.util.Objects;
 public class PointsService {
 
     private final GameStateService gameStateService;
+    private final MessageService messageService;
     private final Map<Specialization, Float> bonusMultiplier = Map.of(
             Specialization.NOVICE, 1f,
             Specialization.FIGHTER, 1.5f);
@@ -35,12 +37,14 @@ public class PointsService {
     public void addPoints(String roomId, String username, int points) {
         gameStateService.getPlayer(roomId, username)
                 .addPoints(points);
+        messageService.broadcastMessage(MessageFormat.successPointsMessage(username, points), roomId);
     }
 
     public void foulMove(String roomId, String username) {
         Player player = gameStateService.getPlayer(roomId, username);
         int points = Math.max(player.getPoints() - 1, 0);
         player.setPoints(points);
+        messageService.broadcastMessage(MessageFormat.foulPointsMessage(username), roomId);
     }
 
     private int getCountOfActors(Position[] positions, Specialization specialization) {

@@ -7,6 +7,7 @@ import com.sac.model.message.ActionContext;
 import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
+import com.sac.service.PointsService;
 import com.sac.service.RoomConnectionService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
@@ -21,6 +22,7 @@ public class AttackAndCapture implements Action {
     private final GameStateService gameStateService;
     private final MessageService messageService;
     private final RoomConnectionService roomConnectionService;
+    private final PointsService pointsService;
 
     @Override
     public GameAction getActionType() {
@@ -77,7 +79,7 @@ public class AttackAndCapture implements Action {
                                    Integer opponentPositionId, GameState gameState) {
         messageService.sendToSender(roomConnectionService.getUserRegistry().get(playerUserName),
                 MessageFormat.captureSuccessAction(playerUserName, opponentUsername, opponentPositionId));
-        gameState.getPlayer(playerUserName).addPoints(pointsForSuccessfulAction());
+        pointsService.addPoints(roomId, playerUserName, pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         messageService.broadcastMessage(MessageFormat.chooseMessage(playerUserName), roomId);
