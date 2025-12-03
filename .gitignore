@@ -1,6 +1,8 @@
+.DS_Store
 HELP.md
 target/
-tmp/**
+tmp/
+tools/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

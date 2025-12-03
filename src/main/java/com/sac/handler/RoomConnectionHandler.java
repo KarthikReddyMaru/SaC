@@ -43,13 +43,12 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         UserSessionInfo sessionInfo = sessionRoomMap.get(username);
-        String roomId = sessionInfo.roomId();
 
         log.info("{}'s connection lost", username);
 
         if (sessionInfo.sessionId().equals(webSocketSession.getId())) {
             sessionRoomMap.remove(username);
-            gameplayService.tryLeave(webSocketSession, roomId);
+            gameplayService.tryLeave(webSocketSession, sessionInfo.roomId());
         }
 
         log.info("{}'s data cleared, details - {}", username, sessionRoomMap.getOrDefault(username, null));
