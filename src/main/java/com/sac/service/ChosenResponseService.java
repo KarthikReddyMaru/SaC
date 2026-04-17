@@ -19,7 +19,7 @@ public class ChosenResponseService {
 
     public void processChosenResponses(String roomId, GameState gameState, Map<String, Integer> respondedPlayers) {
 
-        String  chosenPlayerId = gameState.getCurrentPlayerId();
+        String chosenPlayerId = gameState.getCurrentPlayerId();
         int chosenPosition = respondedPlayers.get(chosenPlayerId);
 
         String guessedPlayerId = gameStateService.getOpponentId(roomId, chosenPlayerId);

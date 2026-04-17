@@ -61,8 +61,7 @@ public class GameplayService {
             log.info("GameState initialized");
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
             messageService.broadcastMessage(MessageFormat.chooseMessage(
-                    gameStateService.getGameState(roomId).getCurrentPlayerId()),
-                    roomId, ServerResponse.Type.INFO);
+                    gameStateService.getGameState(roomId).getCurrentPlayerId()), roomId);
         }
     }
 

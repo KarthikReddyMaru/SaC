@@ -44,7 +44,7 @@ public class Kamikaze implements Action {
             Position opponentPosition = opponent.getPositions()[opponentPositionId];
             Actor opponentActor = opponentPosition.getActor();
 
-            if (opponentActor == null || playerActor.getCurrentState().level <= opponentActor.getCurrentState().level) {
+            if (opponentActor == null || opponentActor.getCurrentState().level <=  playerActor.getCurrentState().level) {
                 playerPosition.setActor(null);
                 messageService.broadcastMessage(
                         MessageFormat.kamikazeSuccessAction(username, opponent.getUsername(), opponentPositionId),
@@ -56,7 +56,7 @@ public class Kamikaze implements Action {
                         username, opponentPositionId, opponentActor.getCurrentState(), playerActor.getCurrentState()),
                         roomId);
             }
-            postProcessAction(gameState, roomId, username);
+            postProcessAction(gameState, username, roomId);
         }
     }
 

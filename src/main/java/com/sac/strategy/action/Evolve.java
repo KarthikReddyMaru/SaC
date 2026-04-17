@@ -39,8 +39,9 @@ public class Evolve implements Action {
             GameState gameState = gameStateService.getGameState(roomId);
             Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
             int actionPerformingOn = gameState.getActionPendingOn();
+            Specialization currentSpecialization = position.getActor().getCurrentState();
             position.setActor(ActorFactory.getInstance(requestedTransition));
-            postProcessAction(roomId, username, actionPerformingOn, position.getActor().getCurrentState(),
+            postProcessAction(roomId, username, actionPerformingOn, currentSpecialization,
                     requestedTransition, gameState);
         }
     }
