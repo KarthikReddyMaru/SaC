@@ -9,6 +9,6 @@ public enum GameMode {
         return Arrays.stream(GameMode.values())
                 .filter(mode -> mode.name().equalsIgnoreCase(gameMode))
                 .findFirst()
-                .orElse(PICKER_POINTS);
+                .orElse(CLASSIC_POINTS);
     }
 }
