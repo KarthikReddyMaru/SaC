@@ -5,5 +5,5 @@ import com.sac.strategy.action.Kamikaze;
 import org.springframework.web.socket.WebSocketSession;
 
 public interface PreActionVisitor {
-    void visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext actionContext);
+    boolean visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext actionContext);
 }

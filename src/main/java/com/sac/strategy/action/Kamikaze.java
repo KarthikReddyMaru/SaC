@@ -29,8 +29,8 @@ public class Kamikaze implements Action {
     }
 
     @Override
-    public void preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
-        preActionVisitor.visit(this, webSocketSession, actionContext);
+    public boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
+        return preActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
     @Override

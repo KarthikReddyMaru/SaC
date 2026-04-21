@@ -15,13 +15,13 @@ import org.springframework.web.socket.WebSocketSession;
 
 @Component
 @RequiredArgsConstructor
-public class ClassicPointsPreAction implements PreActionVisitor {
+public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
     @Override
-    public void visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext context) {
+    public boolean visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext context) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -36,14 +36,19 @@ public class ClassicPointsPreAction implements PreActionVisitor {
             !gameState.getCurrentPlayerId().equals(username) ||
             gameState.getActionPendingOn() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
         } else if (opponentPositionId == null && context.getSourcePosition() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
+            return false;
         } else if (actor == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(gameState.getActionPendingOn()));
+            return false;
         } else if (!actor.getAllowedActions().contains(context.getGameAction())) {
             messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
                     actor.getCurrentState(), context.getGameAction()));
+            return false;
         }
+        return true;
     }
 
 }
