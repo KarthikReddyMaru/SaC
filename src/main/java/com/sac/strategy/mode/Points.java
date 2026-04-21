@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static com.sac.model.GameMode.POINTS;
+import static com.sac.model.GameMode.PICKER_POINTS;
 
 @Component
 @RequiredArgsConstructor
@@ -34,6 +34,6 @@ public class Points implements Mode {
 
     @Override
     public GameMode getMode() {
-        return POINTS;
+        return PICKER_POINTS;
     }
 }
