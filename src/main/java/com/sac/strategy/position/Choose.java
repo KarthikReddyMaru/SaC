@@ -1,8 +1,7 @@
-package com.sac.strategy.message;
+package com.sac.strategy.position;
 
 import com.sac.model.GameState;
-import com.sac.model.message.DefaultMessage;
-import com.sac.model.message.DefaultMessage.Type;
+import com.sac.model.message.PositionContext;
 import com.sac.model.message.ServerResponse;
 import com.sac.service.ChosenResponseService;
 import com.sac.service.GameStateService;
@@ -18,12 +17,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class Choose implements MessageHandlerStrategy {
+public class Choose implements PositionSelectionHandlerStrategy {
 
     private final Map<String, Map<String, Integer>> roomsRespondedPlayers = new ConcurrentHashMap<>();
 
@@ -32,14 +30,14 @@ public class Choose implements MessageHandlerStrategy {
     private final ChosenResponseService chosenResponseService;
 
     @Override
-    public Type getStrategy() {
-        return Type.CHOOSE;
+    public PositionSelection getPositionSelectionType() {
+        return PositionSelection.CHOOSE;
     }
 
     @Override
-    public void handle(WebSocketSession webSocketSession, DefaultMessage message, String roomId) throws IOException {
+    public void handle(WebSocketSession webSocketSession, PositionContext positionContext, String roomId) throws IOException {
         GameState gameState = gameStateService.getGameState(roomId);
-        if (preProcessChecks(webSocketSession, message.getContent(), gameState)) {
+        if (preProcessChecks(webSocketSession, positionContext.getPosition(), gameState)) {
             roomsRespondedPlayers.computeIfAbsent(roomId, (room) -> new HashMap<>());
             String respondedPlayerId = SocketSessionUtil.getUserNameFromSession(webSocketSession);
             Map<String, Integer> respondedPlayers = roomsRespondedPlayers.get(roomId);
@@ -49,8 +47,8 @@ public class Choose implements MessageHandlerStrategy {
                         "Your response is already recorded, wait for opponent",
                         ServerResponse.Type.ERROR);
             } else {
-                respondedPlayers.put(respondedPlayerId, Integer.parseInt(message.getContent()));
-                messageService.sendToSender(webSocketSession, "Your response is recorded as " + message.getContent());
+                respondedPlayers.put(respondedPlayerId, positionContext.getPosition());
+                messageService.sendToSender(webSocketSession, "Your response is recorded as " + positionContext.getPosition());
                 messageService.sendMessage(webSocketSession, MessageFormat.chosenResponseMessage(respondedPlayerId), roomId);
                 int totalPlayersInTheRoom = gameState.getPlayerCount();
                 if (totalPlayersInTheRoom == respondedPlayers.size())
@@ -59,7 +57,7 @@ public class Choose implements MessageHandlerStrategy {
         }
     }
 
-    private boolean preProcessChecks(WebSocketSession webSocketSession, String chosenNumber, GameState gameState) {
+    private boolean preProcessChecks(WebSocketSession webSocketSession, int chosenNumber, GameState gameState) {
         if (gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
                             gameState.getCurrentPlayerId());
@@ -68,8 +66,8 @@ public class Choose implements MessageHandlerStrategy {
                     ServerResponse.Type.ERROR);
             return false;
         }
-        if (!Pattern.matches("^[0-5]$", chosenNumber)) {
-            String errorMsg = "Only positions from 0 to 5 are allowed";
+        if (chosenNumber < 1 || chosenNumber > 10) {
+            String errorMsg = "Only positions from 1 to 10 are allowed";
             messageService.sendToSender(webSocketSession,
                     MessageFormat.systemError(errorMsg),
                     ServerResponse.Type.ERROR);
