@@ -1,8 +1,6 @@
 package com.sac.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sac.model.message.DefaultMessage;
 import com.sac.model.message.ServerResponse;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +9,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Set;
 
 @Service
