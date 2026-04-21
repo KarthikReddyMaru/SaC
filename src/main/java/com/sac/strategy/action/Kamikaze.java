@@ -31,61 +31,56 @@ public class Kamikaze implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-        GameState gameState = gameStateService.getGameState(roomId);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        Integer opponentPositionId = actionContext.getDestinationPosition();
-        if (preProcessAction(gameState, webSocketSession, username, opponentPositionId)) {
 
-            Integer playerPositionId = gameState.getActionPendingOn();
-            Position playerPosition = gameState.getPlayerPosition(username, playerPositionId);
-            Actor playerActor = playerPosition.getActor();
+        if (preProcessAction(webSocketSession, actionContext, roomId)) {
 
+            GameState gameState = gameStateService.getGameState(roomId);
+            String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
             Player opponent = gameState.getOpponent(username);
-            Position opponentPosition = opponent.getPositions()[opponentPositionId];
-            Actor opponentActor = opponentPosition.getActor();
 
-            if (opponentActor == null || opponentActor.getCurrentState().level <=  playerActor.getCurrentState().level) {
-                playerPosition.setActor(null);
-                messageService.broadcastMessage(
-                        MessageFormat.kamikazeSuccessAction(username, opponent.getUsername(), opponentPositionId),
-                        roomId);
+            Integer destinationPositionToPerformAction = actionContext.getDestinationPosition();
+            Integer sourcePositionToPerformAction = actionContext.getSourcePosition();
+            Integer actionPendingPosition = gameState.getActionPendingOn();
+
+            Position playerPosition = gameState.getPlayerPosition(username, actionPendingPosition);
+            Position opponentPosition = opponent.getPositions()[destinationPositionToPerformAction];
+
+            if (sourcePositionToPerformAction != null) {
+                playerPosition.restorePosition();
+                messageService.broadcastMessage(MessageFormat.kamikazeSuccessAction(username, sourcePositionToPerformAction), roomId);
             } else {
-                opponentPosition.setActor(playerPosition.getActor());
-                playerPosition.setActor(null);
-                messageService.broadcastMessage(MessageFormat.kamikazeSuccessActionWithDegradation(
-                        username, opponentPositionId, opponentActor.getCurrentState(), playerActor.getCurrentState()),
-                        roomId);
+                opponentPosition.restorePosition();
+                messageService.broadcastMessage(MessageFormat.kamikazeSuccessAction(opponent.getUsername(), destinationPositionToPerformAction), roomId);
             }
             postProcessAction(gameState, username, roomId);
         }
     }
 
-    private boolean preProcessAction(GameState gameState, WebSocketSession webSocketSession,
-                                     String username, Integer opponentPositionId) {
-        if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+    private boolean preProcessAction(WebSocketSession webSocketSession, ActionContext context, String roomId) {
+
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        GameState gameState = gameStateService.getGameState(roomId);
+        Integer opponentPositionId = context.getDestinationPosition();
+
+        if (!gameState.isActionPending() ||
+            !gameState.getCurrentPlayerId().equals(username) ||
+            gameState.getActionPendingOn() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
-        } else if (gameState.getActionPendingOn() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        } else if (opponentPositionId == null) {
+        } else if (opponentPositionId == null && context.getSourcePosition() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
             return false;
         }
 
         Position position = gameState.getPlayerPosition(username, gameState.getActionPendingOn());
-        Position opponentPosition = gameState.getOpponentPosition(username, opponentPositionId);
         Actor actor = position.getActor();
+
         if (actor == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(gameState.getActionPendingOn()));
             return false;
         } else if (!actor.getAllowedActions().contains(getActionType())) {
             messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
                     actor.getCurrentState(), getActionType()));
-            return false;
-        } else if (opponentPosition.isCapturedByOpponent()) {
-            messageService.sendToSender(webSocketSession, MessageFormat.capturedTrouble(
-                    opponentPosition.getBelongsTo(), opponentPositionId));
             return false;
         }
         return true;

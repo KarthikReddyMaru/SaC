@@ -79,9 +79,8 @@ public class MessageFormat {
         return createJson(Type.INFO, message);
     }
 
-    public static String kamikazeSuccessAction(String username, String opponent, int opponentPosition) {
-        String message = String.format("%s hit position %d, but %s was unaffected",
-                username, opponentPosition, opponent);
+    public static String kamikazeSuccessAction(String username, int position) {
+        String message = String.format("Position %d of %s restored to last state", position, username);
         return createJson(Type.INFO, message);
     }
 
