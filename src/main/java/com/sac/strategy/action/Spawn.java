@@ -42,10 +42,9 @@ public class Spawn implements Action {
 
     private boolean preProcessAction(WebSocketSession webSocketSession, String username, String roomId) {
         GameState gameState = gameStateService.getGameState(roomId);
-        if (gameState.getActionPendingOn() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        } else if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+        if (gameState.getActionPendingOn() == null ||
+            !gameState.isActionPending() ||
+            !gameState.getCurrentPlayerId().equals(username)) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
         } else if (gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn()).getActor() != null) {
@@ -60,7 +59,6 @@ public class Spawn implements Action {
         messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()), roomId);
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
-        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
     }
 
     @Override

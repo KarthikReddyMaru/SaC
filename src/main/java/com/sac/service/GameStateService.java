@@ -47,6 +47,7 @@ public class GameStateService {
                     for (int i = 0; i < playerPositions; i++) {
                         positions[i] = Position.builder()
                                 .positionId(i)
+                                .actor(null)
                                 .belongsTo(username)
                                 .isCapturedByOpponent(false)
                                 .build();

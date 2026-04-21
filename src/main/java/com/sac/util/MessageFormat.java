@@ -57,6 +57,14 @@ public class MessageFormat {
     }
 
     /**
+     * Perform Action
+     */
+
+    public static String performAction(String actorType) {
+        return createJson(Type.ACTION_REQUIRED, actorType);
+    }
+
+    /**
      * Success Actions
      */
 
@@ -109,7 +117,7 @@ public class MessageFormat {
     }
 
     public static String capturedTrouble(String opponent, int positionId) {
-        String message = String.format("Position %d: Already owned by %s", positionId, opponent);
+        String message = String.format("Position %d: Already captured by %s", positionId, opponent);
         return createJson(Type.ERROR, message);
     }
 

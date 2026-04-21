@@ -47,7 +47,6 @@ public class GameState {
                 .getPositions()[position];
     }
 
-
     public Position getOpponentPosition(String username, int position) {
         return this
                 .getPlayers()
