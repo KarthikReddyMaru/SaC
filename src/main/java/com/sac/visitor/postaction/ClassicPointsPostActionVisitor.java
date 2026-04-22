@@ -1,9 +1,12 @@
 package com.sac.visitor.postaction;
 
 import com.sac.model.GameState;
+import com.sac.model.actor.Specialization;
+import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.service.PointsService;
+import com.sac.strategy.action.Evolve;
 import com.sac.strategy.action.Kamikaze;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
@@ -19,7 +22,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
-    public void visit(Kamikaze kamikaze, WebSocketSession webSocketSession) {
+    public void visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -33,4 +36,24 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
+    public void visit(Evolve evolve, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+
+        Specialization requestedTransition = actionContext.getSpecialization();
+
+        GameState gameState = gameStateService.getGameState(roomId);
+        int actionPerformingOn = gameState.getActionPendingOn();
+
+        messageService.broadcastMessage(
+                MessageFormat.evolveSuccessAction(username, actionPerformingOn, Specialization.NOVICE, requestedTransition),
+                roomId);
+
+        pointsService.addPoints(roomId, username, evolve.pointsForSuccessfulAction());
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(null);
+        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+    }
 }
