@@ -1,15 +1,20 @@
 package com.sac.strategy.position;
 
-import com.sac.factory.ActionHandlerRegistry;
+import com.sac.factory.GameModeHandlerRegistry;
+import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.Position;
+import com.sac.model.message.ActionContext;
 import com.sac.model.message.PositionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.GameAction;
+import com.sac.strategy.action.Spawn;
 import com.sac.util.MessageFormat;
+import com.sac.util.SocketSessionUtil;
 import com.sac.visitor.prechoose.PreChooseVisitor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -21,7 +26,8 @@ public class Roll implements PositionSelectionHandlerStrategy {
 
     private final GameStateService gameStateService;
     private final MessageService messageService;
-    private final ActionHandlerRegistry actionHandlerRegistry;
+
+    private final Spawn spawn;
 
     @Override
     public void handle(WebSocketSession webSocketSession, PositionContext message, String roomId) throws IOException {
@@ -39,13 +45,16 @@ public class Roll implements PositionSelectionHandlerStrategy {
             gameState.setActionPendingOn(null);
             gameState.setCurrentPlayerId(opponentPlayer);
             messageService.broadcastMessage(String.format("%s will roll the dice now", opponentPlayer), roomId);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (position.getActor() == null) {
             gameState.setActionPending(true);
             gameState.setActionPendingOn(positionId);
-            actionHandlerRegistry.getInstance(GameAction.SPAWN)
-                                 .performAction(webSocketSession, null, roomId);
+            spawn.performAction(webSocketSession, null, roomId);
+            gameState.setActionPending(false);
+            gameState.setActionPendingOn(null);
             gameState.setCurrentPlayerId(opponentPlayer);
             messageService.broadcastMessage(String.format("%s will roll the dice now", opponentPlayer), roomId);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else {
             String infoMessageForOpponent = String.format("%s is performing action", currentPlayer);
             String actorType = position.getActor()
@@ -65,7 +74,8 @@ public class Roll implements PositionSelectionHandlerStrategy {
     }
 
     @Override
-    public boolean preChoose(PreChooseVisitor preChooseVisitor, WebSocketSession webSocketSession, PositionContext message) {
+    public boolean preChoose(PreChooseVisitor preChooseVisitor, WebSocketSession webSocketSession,
+                             PositionContext message) {
         return preChooseVisitor.visit(this, webSocketSession, message);
     }
 }
