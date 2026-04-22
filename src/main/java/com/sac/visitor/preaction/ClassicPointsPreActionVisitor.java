@@ -32,8 +32,6 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         GameState gameState = gameStateService.getGameState(roomId);
         Integer opponentPositionId = context.getDestinationPosition();
 
-        Position position = gameState.getPlayerPosition(username, gameState.getActionPendingOn());
-        Actor actor = position.getActor();
 
         if (!gameState.isActionPending() ||
             !gameState.getCurrentPlayerId().equals(username) ||
@@ -43,7 +41,12 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         } else if (opponentPositionId == null && context.getSourcePosition() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
             return false;
-        } else if (actor == null) {
+        }
+
+        Position position = gameState.getPlayerPosition(username, gameState.getActionPendingOn());
+        Actor actor = position.getActor();
+
+        if (actor == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(gameState.getActionPendingOn()));
             return false;
         } else if (!actor.getAllowedActions().contains(context.getGameAction())) {
@@ -61,8 +64,6 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         Specialization requestedTransition = actionContext.getSpecialization();
         GameState gameState = gameStateService.getGameState(roomId);
-        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
-        Actor actor = position.getActor();
 
         if (gameState.getActionPendingOn() == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
@@ -70,7 +71,12 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         } else if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
             messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
             return false;
-        } else if (actor == null) {
+        }
+
+        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
+        Actor actor = position.getActor();
+
+        if (actor == null) {
             messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
             return false;
         } else if (requestedTransition == null) {
