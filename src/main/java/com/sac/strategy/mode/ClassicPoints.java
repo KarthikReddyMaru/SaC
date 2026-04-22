@@ -16,6 +16,7 @@ import com.sac.visitor.preaction.ClassicPointsPreActionVisitor;
 import com.sac.visitor.prechoose.ClassicPointsPreChooseVisitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
@@ -28,7 +29,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ClassicPoints implements Mode {
 
-    private final int pointsToReach = 21;
+    @Value("${classic.points}")
+    private int pointsToReach;
 
     private final ActionHandlerRegistry actionHandlerRegistry;
     private final GameStateService gameStateService;

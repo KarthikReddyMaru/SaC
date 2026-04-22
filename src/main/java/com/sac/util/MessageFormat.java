@@ -57,6 +57,15 @@ public class MessageFormat {
     }
 
     /**
+     * Roll Messages
+     */
+
+    public static String rollMessage(String username) {
+        String message = String.format("%s will roll the dice now", username);
+        return createJson(Type.INFO, message);
+    }
+
+    /**
      * Perform Action
      */
 

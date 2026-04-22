@@ -49,9 +49,10 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String opponent = gameState.getOpponent(username).getUsername();
 
         pointsService.addPoints(roomId, username, kamikaze.pointsForSuccessfulAction());
-        gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
+        gameState.setActionPending(false);
         gameState.setCurrentPlayerId(opponent);
+        messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -75,7 +76,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponent);
-        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
+        messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -92,12 +93,12 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         messageService.sendToSender(webSocketSession,
                                     MessageFormat.captureSuccessAction(username, opponent,
                                                                        opponentPositionId));
+
         pointsService.addPoints(roomId, username, attackAndCapture.pointsForSuccessfulAction());
-        // Just for clarity
-        gameState.setActionPending(true);
-        gameState.setActionPendingOn(gameState.getActionPendingOn());
         gameState.setCurrentPlayerId(username);
+        gameState.setActionPendingOn(null);
+        gameState.setActionPending(false);
+        messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
-        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
     }
 }

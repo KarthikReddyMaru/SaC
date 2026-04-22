@@ -75,6 +75,9 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
                     actor.getCurrentState(), context.getGameAction()));
             return false;
+        } else if (context.getSourcePosition() != null && gameState.getActionPendingOn().equals(context.getSourcePosition())) {
+            messageService.sendToSender(webSocketSession, "You cannot perform Kamikaze on the same position");
+            return false;
         }
         return true;
     }
