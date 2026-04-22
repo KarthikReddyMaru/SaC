@@ -12,6 +12,8 @@ import com.sac.service.MessageService;
 import com.sac.service.PointsService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
+import com.sac.visitor.postaction.PostActionVisitor;
+import com.sac.visitor.preaction.PreActionVisitor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -23,12 +25,15 @@ import static com.sac.strategy.action.GameAction.EVOLVE;
 public class Evolve implements Action {
 
     private final GameStateService gameStateService;
-    private final MessageService messageService;
-    private final PointsService pointsService;
 
     @Override
     public GameAction getActionType() {
         return EVOLVE;
+    }
+
+    @Override
+    public boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
+        return preActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
     @Override
@@ -37,19 +42,13 @@ public class Evolve implements Action {
         Specialization requestedTransition = actionContext.getSpecialization();
         GameState gameState = gameStateService.getGameState(roomId);
         Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
-        int actionPerformingOn = gameState.getActionPendingOn();
-        Specialization currentSpecialization = position.getActor()
-                                                       .getCurrentState();
         position.setActor(ActorFactory.getInstance(requestedTransition));
-        postProcessAction(roomId, username, actionPerformingOn, currentSpecialization,
-                          requestedTransition, gameState);
     }
 
-    private void postProcessAction(String roomId, String username, int actionPerformingOn,
-                                   Specialization from, Specialization requestedTransition, GameState gameState) {
-
+    @Override
+    public void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
+        postActionVisitor.visit(this, webSocketSession, actionContext);
     }
-
 
     @Override
     public int pointsForSuccessfulAction() {
