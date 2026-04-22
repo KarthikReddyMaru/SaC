@@ -71,7 +71,7 @@ public class ClassicPoints implements Mode {
         Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
         if (action.preAction(classicPointsPreActionVisitor, webSocketSession, actionContext)) {
             action.performAction(webSocketSession, actionContext, roomId);
-            action.postAction(classicPointsPostActionVisitor, webSocketSession);
+            action.postAction(classicPointsPostActionVisitor, webSocketSession, actionContext);
             String winner = this.computeWinner(roomId);
             if (winner != null) {
                 log.info("Game completed, preparing to close connections of room - {}", roomId);
