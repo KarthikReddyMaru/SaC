@@ -6,6 +6,7 @@ import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.service.PointsService;
+import com.sac.strategy.action.AttackAndCapture;
 import com.sac.strategy.action.Evolve;
 import com.sac.strategy.action.Kamikaze;
 import com.sac.strategy.action.Spawn;
@@ -34,6 +35,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
                                         roomId);
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
@@ -73,5 +75,24 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setCurrentPlayerId(opponent);
         messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+    }
+
+    @Override
+    public void visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+
+        GameState gameState = gameStateService.getGameState(roomId);
+        String opponent = gameState.getOpponent(username).getUsername();
+        Integer opponentPositionId = actionContext.getDestinationPosition();
+
+        messageService.sendToSender(webSocketSession,
+                                    MessageFormat.captureSuccessAction(username, opponent,
+                                                                       opponentPositionId));
+        pointsService.addPoints(roomId, username, attackAndCapture.pointsForSuccessfulAction());
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(null);
+        messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
     }
 }

@@ -11,8 +11,6 @@ public interface Action {
     void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId);
     int pointsForSuccessfulAction();
 
-    default boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
-        return false;
-    }
-    default void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {}
+    boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext);
+    void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext);
 }

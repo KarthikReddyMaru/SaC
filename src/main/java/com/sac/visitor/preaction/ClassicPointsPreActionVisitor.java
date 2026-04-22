@@ -8,6 +8,7 @@ import com.sac.model.message.ActionContext;
 import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
+import com.sac.strategy.action.AttackAndCapture;
 import com.sac.strategy.action.Evolve;
 import com.sac.strategy.action.Kamikaze;
 import com.sac.strategy.action.Spawn;
@@ -107,6 +108,44 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             String errorMessage = String.format("%s cannot EVOLVE to %s",
                                                 actor.getCurrentState(), requestedTransition);
             messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+
+        GameState gameState = gameStateService.getGameState(roomId);
+        Integer playerPositionId = gameState.getActionPendingOn();
+
+        if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        } else if (gameState.getActionPendingOn() == null) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        }
+
+        Position playerPosition = gameState.getPlayerPosition(username, playerPositionId);
+        Actor playerActor = playerPosition.getActor();
+        Integer opponentPositionId = actionContext.getDestinationPosition();
+
+        if (playerActor == null) {
+            messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(playerPosition.getPositionId()));
+            return false;
+        } else if (!playerActor.getAllowedActions().contains(attackAndCapture.getActionType())) {
+            messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
+                    playerActor.getCurrentState(), attackAndCapture.getActionType()));
+            return false;
+        } else if (opponentPositionId == null) {
+            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
+            return false;
+        } else if (gameState.getOpponentPosition(username, opponentPositionId).isCapturedByOpponent()) {
+            messageService.sendToSender(webSocketSession, MessageFormat.capturedTrouble(username, opponentPositionId));
             return false;
         }
         return true;

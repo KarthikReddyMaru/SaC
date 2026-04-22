@@ -10,6 +10,8 @@ import com.sac.service.PointsService;
 import com.sac.service.RoomConnectionService;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
+import com.sac.visitor.postaction.PostActionVisitor;
+import com.sac.visitor.preaction.PreActionVisitor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -29,59 +31,26 @@ public class AttackAndCapture implements Action {
     }
 
     @Override
+    public boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession,
+                             ActionContext actionContext) {
+        return preActionVisitor.visit(this, webSocketSession, actionContext);
+    }
+
+    @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
 
         String playerUserName = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        GameState gameState = gameStateService.getGameState(roomId);
-        Integer playerPositionId = gameState.getActionPendingOn();
         Integer opponentPositionId = actionContext.getDestinationPosition();
+        String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
+        Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
+        opponentPosition.capturePosition(playerUserName);
 
-        if (preProcessAction(webSocketSession, playerUserName, gameState, playerPositionId, opponentPositionId)) {
-            String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
-            Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
-            opponentPosition.capturePosition(playerUserName);
-            postProcessAction(roomId, playerUserName, opponentUsername, opponentPositionId, gameState);
-        }
     }
 
-    public boolean preProcessAction(WebSocketSession webSocketSession, String playerName,
-                                    GameState gameState, Integer playerPositionId, Integer opponentPositionId) {
-
-        if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(playerName)) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        } else if (gameState.getActionPendingOn() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        }
-
-        Position playerPosition = gameState.getPlayerPosition(playerName, playerPositionId);
-        Actor playerActor = playerPosition.getActor();
-        if (playerActor == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(playerPosition.getPositionId()));
-            return false;
-        } else if (!playerActor.getAllowedActions().contains(getActionType())) {
-            messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
-                    playerActor.getCurrentState(), getActionType()));
-            return false;
-        } else if (opponentPositionId == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
-            return false;
-        } else if (gameState.getOpponentPosition(playerName, opponentPositionId).isCapturedByOpponent()) {
-            messageService.sendToSender(webSocketSession, MessageFormat.capturedTrouble(playerName, opponentPositionId));
-            return false;
-        }
-        return true;
-    }
-
-    private void postProcessAction(String roomId, String playerUserName, String opponentUsername,
-                                   Integer opponentPositionId, GameState gameState) {
-        messageService.sendToSender(roomConnectionService.getUserRegistry().get(playerUserName),
-                MessageFormat.captureSuccessAction(playerUserName, opponentUsername, opponentPositionId));
-        pointsService.addPoints(roomId, playerUserName, pointsForSuccessfulAction());
-        gameState.setActionPending(false);
-        gameState.setActionPendingOn(null);
-        messageService.broadcastMessage(MessageFormat.chooseMessage(playerUserName), roomId);
+    @Override
+    public void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession,
+                           ActionContext actionContext) {
+        return postActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
     @Override
