@@ -3,6 +3,7 @@ package com.sac.visitor.postaction;
 import com.sac.model.GameState;
 import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.service.PointsService;
@@ -36,6 +37,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
+    @Override
     public void visit(Evolve evolve, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
@@ -45,6 +47,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         GameState gameState = gameStateService.getGameState(roomId);
         int actionPerformingOn = gameState.getActionPendingOn();
+        String opponent = gameState.getOpponent(username).getUsername();
 
         messageService.broadcastMessage(
                 MessageFormat.evolveSuccessAction(username, actionPerformingOn, Specialization.NOVICE, requestedTransition),
@@ -53,6 +56,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         pointsService.addPoints(roomId, username, evolve.pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
+        gameState.setCurrentPlayerId(opponent);
         messageService.broadcastMessage(MessageFormat.chooseMessage(username), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
