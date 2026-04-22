@@ -3,12 +3,12 @@ package com.sac.visitor.postaction;
 import com.sac.model.GameState;
 import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
-import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.service.PointsService;
 import com.sac.strategy.action.Evolve;
 import com.sac.strategy.action.Kamikaze;
+import com.sac.strategy.action.Spawn;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +23,20 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
+    @Override
+    public void visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        GameState gameState = gameStateService.getGameState(roomId);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+
+        messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()),
+                                        roomId);
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(null);
+    }
+
+    @Override
     public void visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);

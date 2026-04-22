@@ -10,6 +10,7 @@ import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Evolve;
 import com.sac.strategy.action.Kamikaze;
+import com.sac.strategy.action.Spawn;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,27 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     private final MessageService messageService;
 
     @Override
+    public boolean visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+
+        GameState gameState = gameStateService.getGameState(roomId);
+
+        if (gameState.getActionPendingOn() == null ||
+            !gameState.isActionPending() ||
+            !gameState.getCurrentPlayerId().equals(username)) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        } else if (gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn()).getActor() != null) {
+            String errorMsg = "An actor already present in this position, choose different action";
+            messageService.sendToSender(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
     public boolean visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext context) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
@@ -31,7 +53,6 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         GameState gameState = gameStateService.getGameState(roomId);
         Integer opponentPositionId = context.getDestinationPosition();
-
 
         if (!gameState.isActionPending() ||
             !gameState.getCurrentPlayerId().equals(username) ||
