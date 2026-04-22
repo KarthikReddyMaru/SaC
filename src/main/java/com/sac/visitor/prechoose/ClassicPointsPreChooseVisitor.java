@@ -9,6 +9,7 @@ import com.sac.strategy.position.Roll;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -18,6 +19,9 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
 
     private final GameStateService gameStateService;
     private final MessageService messageService;
+
+    @Value("${player.total_positions}")
+    private int maxPositionsPerPlayer;
 
     @Override
     public boolean visit(Roll roll, WebSocketSession webSocketSession, PositionContext positionContext) {
@@ -41,8 +45,8 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
                                         ServerResponse.Type.ERROR);
             return false;
         }
-        else if (rolledNumber < 1 || rolledNumber > 10) {
-            String errorMsg = "Only positions from 1 to 10 are allowed";
+        else if (rolledNumber < 1 || rolledNumber > maxPositionsPerPlayer) {
+            String errorMsg = "Only positions from 1 to " + maxPositionsPerPlayer + " are allowed";
             messageService.sendToSender(webSocketSession,
                                         MessageFormat.systemError(errorMsg),
                                         ServerResponse.Type.ERROR);

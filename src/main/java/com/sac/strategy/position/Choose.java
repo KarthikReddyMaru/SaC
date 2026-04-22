@@ -10,6 +10,7 @@ import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -28,6 +29,9 @@ public class Choose implements PositionSelectionHandlerStrategy {
     private final GameStateService gameStateService;
     private final MessageService messageService;
     private final ChosenResponseService chosenResponseService;
+
+    @Value("${player.total_positions}")
+    private int maxPositionsPerPlayer;
 
     @Override
     public PositionSelection getPositionSelectionType() {
@@ -66,8 +70,8 @@ public class Choose implements PositionSelectionHandlerStrategy {
                     ServerResponse.Type.ERROR);
             return false;
         }
-        if (chosenNumber < 1 || chosenNumber > 10) {
-            String errorMsg = "Only positions from 1 to 10 are allowed";
+        if (chosenNumber < 1 || chosenNumber > maxPositionsPerPlayer) {
+            String errorMsg = "Only positions from 1 to " + maxPositionsPerPlayer + " are allowed";
             messageService.sendToSender(webSocketSession,
                     MessageFormat.systemError(errorMsg),
                     ServerResponse.Type.ERROR);

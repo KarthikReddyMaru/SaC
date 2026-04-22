@@ -6,6 +6,7 @@ import com.sac.model.GameState.Player;
 import com.sac.model.Position;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GameStateService {
 
     private final ConcurrentHashMap<String, GameState> gameStates = new ConcurrentHashMap<>();
+    @Value("${player.total_positions}")
+    private int playerPositions;
 
     public GameState initializeGameState(String roomId, List<String> players, GameMode gameMode) {
         if (!gameStates.containsKey(roomId)) {
@@ -40,11 +43,10 @@ public class GameStateService {
     }
 
     private List<Player> initializePlayers(List<String> players) {
-        int playerPositions = 6;
         return players.stream()
                 .map(username -> {
-                    Position[] positions = new Position[playerPositions];
-                    for (int i = 0; i < playerPositions; i++) {
+                    Position[] positions = new Position[playerPositions + 1];
+                    for (int i = 0; i <= playerPositions; i++) {
                         positions[i] = Position.builder()
                                 .positionId(i)
                                 .actor(null)
