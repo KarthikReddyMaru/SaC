@@ -60,8 +60,8 @@ public class Kamikaze implements Action {
     }
 
     @Override
-    public void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession) {
-        postActionVisitor.visit(this, webSocketSession);
+    public void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
+        postActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
     @Override

@@ -14,5 +14,5 @@ public interface Action {
     default boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {
         return false;
     }
-    default void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession) {}
+    default void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext) {}
 }
