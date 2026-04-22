@@ -7,7 +7,6 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 
-@Component
 public interface PositionSelectionHandlerStrategy {
 
     void handle(WebSocketSession webSocketSession, PositionContext message, String roomId) throws IOException;

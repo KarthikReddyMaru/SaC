@@ -44,15 +44,15 @@ public class Kamikaze implements Action {
         Integer sourcePositionToPerformAction = actionContext.getSourcePosition();
         Integer actionPendingPosition = gameState.getActionPendingOn();
 
-        Position playerPosition = gameState.getPlayerPosition(username, actionPendingPosition);
-        Position opponentPosition = opponent.getPositions()[destinationPositionToPerformAction];
+        Position actionPerformingPosition = gameState.getPlayerPosition(username, actionPendingPosition);
 
+        actionPerformingPosition.setActor(null);
         if (sourcePositionToPerformAction != null) {
-            playerPosition.restorePosition();
+            gameState.getPlayerPosition(username, sourcePositionToPerformAction).restorePosition();
             messageService.broadcastMessage(
                     MessageFormat.kamikazeSuccessAction(username, sourcePositionToPerformAction), roomId);
         } else {
-            opponentPosition.restorePosition();
+            opponent.getPositions()[destinationPositionToPerformAction].restorePosition();
             messageService.broadcastMessage(
                     MessageFormat.kamikazeSuccessAction(opponent.getUsername(), destinationPositionToPerformAction),
                     roomId);
