@@ -3,9 +3,12 @@ package com.sac.visitor.preaction;
 import com.sac.model.GameState;
 import com.sac.model.Position;
 import com.sac.model.actor.Actor;
+import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
+import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
+import com.sac.strategy.action.Evolve;
 import com.sac.strategy.action.Kamikaze;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
@@ -51,4 +54,34 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         return true;
     }
 
+    @Override
+    public boolean visit(Evolve evolve, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        Specialization requestedTransition = actionContext.getSpecialization();
+        GameState gameState = gameStateService.getGameState(roomId);
+        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
+        Actor actor = position.getActor();
+
+        if (gameState.getActionPendingOn() == null) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        } else if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            return false;
+        } else if (actor == null) {
+            messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
+            return false;
+        } else if (requestedTransition == null) {
+            messageService.sendToSender(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
+            return false;
+        } else if (!actor.getAllowedTransitions().contains(requestedTransition) || actor.getCurrentState().equals(requestedTransition)) {
+            String errorMessage = String.format("%s cannot EVOLVE to %s",
+                                                actor.getCurrentState(), requestedTransition);
+            messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
+            return false;
+        }
+        return true;
+    }
 }
