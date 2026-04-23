@@ -26,7 +26,8 @@ public class RoomConnectionService {
     private int maxRoomSize;
 
     public boolean tryJoin(String roomId, WebSocketSession webSocketSession) throws Exception {
-        int currRoomSize = rooms.getOrDefault(roomId, Collections.emptySet()).size();
+        int currRoomSize = rooms.getOrDefault(roomId, Collections.emptySet())
+                                .size();
         if (currRoomSize == maxRoomSize) return false;
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         return addUserToRoom(roomId, webSocketSession, username);
@@ -39,12 +40,14 @@ public class RoomConnectionService {
             return false;
         }
         rooms.computeIfAbsent(roomId, (room) -> Collections.synchronizedSet(new HashSet<>()));
-        rooms.get(roomId).add(username);
+        rooms.get(roomId)
+             .add(username);
         return true;
     }
 
     public boolean tryRemove(String roomId, String username) throws Exception {
-        log.info("Removing {}'s session, Players in room - {}", username, rooms.getOrDefault(roomId, Collections.emptySet()));
+        log.info("Removing {}'s session, Players in room - {}", username,
+                 rooms.getOrDefault(roomId, Collections.emptySet()));
         Set<String> players = rooms.get(roomId);
         if (players == null) return false;
 
@@ -61,26 +64,37 @@ public class RoomConnectionService {
 
         rooms.remove(roomId);
         log.info("{}'s session - {}, Room status - {}", username,
-                userRegistry.getOrDefault(username, null),
-                rooms.containsKey(roomId));
+                 userRegistry.getOrDefault(username, null),
+                 rooms.containsKey(roomId));
         return true;
     }
 
     public Set<WebSocketSession> getSessions(String roomId) {
         return rooms.getOrDefault(roomId, Collections.emptySet())
-                .stream()
-                .map(userRegistry::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toUnmodifiableSet());
+                    .stream()
+                    .map(userRegistry::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toUnmodifiableSet());
     }
 
     public Set<String> getPlayers(String roomId) {
         return rooms.getOrDefault(roomId, Collections.emptySet());
     }
 
-    public int getRoomSize(String roomId) {
-        return rooms.getOrDefault(roomId, Collections.emptySet()).size();
+    public WebSocketSession getPlayerSession(String roomId, String username) {
+        return getPlayers(roomId).stream()
+                                 .filter(player -> player.equals(username))
+                                 .findFirst()
+                                 .map(userRegistry::get)
+                                 .orElseThrow();
     }
 
-    public boolean isFull(String roomId) { return getRoomSize(roomId) == maxRoomSize; }
+    public int getRoomSize(String roomId) {
+        return rooms.getOrDefault(roomId, Collections.emptySet())
+                    .size();
+    }
+
+    public boolean isFull(String roomId) {
+        return getRoomSize(roomId) == maxRoomSize;
+    }
 }

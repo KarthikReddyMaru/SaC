@@ -67,6 +67,11 @@ public class MessageService {
         }
     }
 
+    public void sendToSender(String username, String roomId, String message) {
+        WebSocketSession webSocketSession = roomConnectionService.getPlayerSession(roomId, username);
+        sendToSender(webSocketSession, message);
+    }
+
     public void sendServerResponseAsStringToSender(WebSocketSession session, String message) {
         if (session.isOpen()) {
             try {
