@@ -6,7 +6,6 @@ import com.sac.model.GameState;
 import com.sac.model.actor.Specialization;
 import com.sac.model.message.ServerResponse;
 import com.sac.model.message.ServerResponse.Type;
-import com.sac.service.GameRendererService;
 import com.sac.strategy.action.GameAction;
 
 public class MessageFormat {
@@ -70,12 +69,11 @@ public class MessageFormat {
 
     public static String rollMessage(String username) {
         String message = String.format("%s will roll the dice now", username);
-        return createJson(Type.SELECT_POSITION, message);
+        return createJson(Type.INFO, message);
     }
 
-    public static String rollAgain(String username) {
-        String message = String.format("%s performed invalid move, roll again", username);
-        return createJson(Type.SELECT_POSITION, message);
+    public static String rollAction() {
+        return createJson(Type.SELECT_POSITION, "ROLL");
     }
 
     /**
@@ -150,9 +148,8 @@ public class MessageFormat {
         return createJson(Type.ERROR, message);
     }
 
-    public static String retryActionAgain(String username) {
-        String message = String.format("%s performed invalid move, retry the action again", username);
-        return createJson(Type.ACTION_REQUIRED, message);
+    public static String retryActionAgain(String actorType) {
+        return createJson(Type.ACTION_REQUIRED, actorType);
     }
 
 
