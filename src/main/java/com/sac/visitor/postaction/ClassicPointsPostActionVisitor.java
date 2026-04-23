@@ -34,6 +34,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()),
                                         roomId);
+        pointsService.addPoints(roomId, username, spawn.pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponent);
