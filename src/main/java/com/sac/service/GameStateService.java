@@ -4,6 +4,7 @@ import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.GameState.Player;
 import com.sac.model.Position;
+import com.sac.strategy.position.PositionSelection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +33,9 @@ public class GameStateService {
                     .actionPendingOn(null)
                     .status(GameState.Status.PLAYING)
                     .gameMode(gameMode)
+                    .positionSelection(PositionSelection.ROLL)
                     .playerCount(players.size())
+                    .winner(null)
                     .totalMovesPlayed(0)
                     .totalAvailableMoves(Integer.MAX_VALUE)
                     .build();

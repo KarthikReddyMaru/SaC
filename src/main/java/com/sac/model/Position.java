@@ -1,5 +1,6 @@
 package com.sac.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sac.model.actor.Actor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class Position {
     private String belongsTo;
     private Actor actor;
 
+    @JsonIgnore
     private final PositionCareTaker positionCareTaker = new PositionCareTaker();
 
     public void setActor(Actor actor) {

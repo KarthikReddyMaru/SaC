@@ -76,9 +76,15 @@ public class ClassicPoints implements Mode {
             action.postAction(classicPointsPostActionVisitor, webSocketSession, actionContext);
             String winner = this.computeWinner(roomId);
             if (winner != null) {
+                GameState gameState = gameStateService.getGameState(roomId);
                 log.info("Game completed, preparing to close connections of room - {}", roomId);
+                gameState.setStatus(GameState.Status.FINISHED);
+                gameState.setWinner(winner);
+                gameState.setActionPendingOn(null);
+                gameState.setCurrentPlayerId(null);
+                gameState.setActionPending(false);
                 messageService.broadcastMessage(
-                        MessageFormat.endGameWithWinner(winner, gameStateService.getGameState(roomId)), roomId);
+                        MessageFormat.endGameWithWinner(gameState), roomId);
                 webSocketSession.close(CloseStatus.NORMAL);
             }
         }

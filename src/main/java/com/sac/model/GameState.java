@@ -1,5 +1,6 @@
 package com.sac.model;
 
+import com.sac.strategy.position.PositionSelection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,8 @@ public class GameState {
     private Integer actionPendingOn;
     private Status status;
     private GameMode gameMode;
+    private PositionSelection positionSelection;
+    private String winner;
     private int totalMovesPlayed;
     private int totalAvailableMoves;
 

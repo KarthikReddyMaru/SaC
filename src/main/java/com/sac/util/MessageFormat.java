@@ -30,6 +30,14 @@ public class MessageFormat {
         }
     }
 
+    private static String createJson(Object message) {
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(Type.INFO, SYSTEM, message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
+    }
+
     /**
      * System Messages
      */
@@ -48,7 +56,7 @@ public class MessageFormat {
 
     public static String chooseMessage(String username) {
         String message = String.format("Your turn to choose a position, %s!", username);
-        return createJson(Type.INFO, message);
+        return createJson(Type.SELECT_POSITION, message);
     }
 
     public static String chosenResponseMessage(String username) {
@@ -62,7 +70,12 @@ public class MessageFormat {
 
     public static String rollMessage(String username) {
         String message = String.format("%s will roll the dice now", username);
-        return createJson(Type.INFO, message);
+        return createJson(Type.SELECT_POSITION, message);
+    }
+
+    public static String rollAgain(String username) {
+        String message = String.format("%s performed invalid move, roll again", username);
+        return createJson(Type.SELECT_POSITION, message);
     }
 
     /**
@@ -90,13 +103,6 @@ public class MessageFormat {
 
     public static String kamikazeSuccessAction(String username, int position) {
         String message = String.format("Position %d of %s restored to last state", position, username);
-        return createJson(Type.INFO, message);
-    }
-
-    public static String kamikazeSuccessActionWithDegradation(String username, int opponentPositionId,
-                                                              Specialization from, Specialization to) {
-        String message = String.format("%s hit position %d, degrading %s to %s",
-                username, opponentPositionId, from.toString().toLowerCase(), to.toString().toLowerCase());
         return createJson(Type.INFO, message);
     }
 
@@ -144,17 +150,21 @@ public class MessageFormat {
         return createJson(Type.ERROR, message);
     }
 
+    public static String retryActionAgain(String username) {
+        String message = String.format("%s performed invalid move, retry the action again", username);
+        return createJson(Type.ACTION_REQUIRED, message);
+    }
+
+
     /**
      * Game States
      */
 
     public static String gameState(GameState gameState) {
-        String state = GameRendererService.render(gameState);
-        return createJson(Type.STATE, state);
+        return createJson(gameState);
     }
 
-    public static String endGameWithWinner(String winner, GameState gameState) {
-        String state = GameRendererService.render(gameState);
-        return createJson(Type.FINISH, winner, state);
+    public static String endGameWithWinner(GameState gameState) {
+        return createJson(gameState);
     }
 }
