@@ -1,20 +1,14 @@
 package com.sac.strategy.position;
 
-import com.sac.factory.GameModeHandlerRegistry;
-import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.Position;
-import com.sac.model.message.ActionContext;
 import com.sac.model.message.PositionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
-import com.sac.strategy.action.GameAction;
 import com.sac.strategy.action.Spawn;
 import com.sac.util.MessageFormat;
-import com.sac.util.SocketSessionUtil;
 import com.sac.visitor.prechoose.PreChooseVisitor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 

@@ -1,14 +1,11 @@
 package com.sac.service;
 
-import com.sac.factory.GameModeHandlerRegistry;
 import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.message.ServerResponse;
-import com.sac.strategy.mode.Mode;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -23,7 +20,6 @@ public class GameplayService {
 
     private final RoomConnectionService roomConnectionService;
     private final GameStateService gameStateService;
-    private final GameModeHandlerRegistry gameModeHandlerRegistry;
     private final MessageService messageService;
 
     public String tryJoin(WebSocketSession webSocketSession) throws Exception {
@@ -65,16 +61,4 @@ public class GameplayService {
         }
     }
 
-    @SneakyThrows
-    public void postProcessAction(WebSocketSession webSocketSession, String roomId) {
-        GameState gameState = gameStateService.getGameState(roomId);
-        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
-        Mode mode = gameModeHandlerRegistry.getInstance(gameState.getGameMode());
-        if (mode.computeWinner(roomId) != null) {
-            String winner = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-            messageService.broadcastMessage(MessageFormat.endGameWithWinner(winner, gameState), roomId);
-            log.info("Game completed, preparing to close connections of room - {}", roomId);
-            webSocketSession.close(CloseStatus.NORMAL);
-        }
-    }
 }
