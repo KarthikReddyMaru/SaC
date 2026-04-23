@@ -118,8 +118,8 @@ public class MessageFormat {
         return createJson(Type.ERROR, message);
     }
 
-    public static String noDestinationProvided() {
-        String message = "Please choose a destination";
+    public static String inValidDestinationProvided() {
+        String message = "Please choose a valid destination";
         return createJson(Type.ERROR, message);
     }
 
