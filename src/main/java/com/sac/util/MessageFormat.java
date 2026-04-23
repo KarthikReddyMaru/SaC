@@ -37,6 +37,14 @@ public class MessageFormat {
         }
     }
 
+    private static String createJson(Type type, Object message) {
+        try {
+            return objectMapper.writeValueAsString(new ServerResponse(type, SYSTEM, message));
+        } catch (JsonProcessingException e) {
+            return "{\"type\":\"ERROR\",\"sender\":\"System\",\"content\":\"Error rendering message\"}";
+        }
+    }
+
     /**
      * System Messages
      */
@@ -162,6 +170,6 @@ public class MessageFormat {
     }
 
     public static String endGameWithWinner(GameState gameState) {
-        return createJson(gameState);
+        return createJson(Type.FINISH, gameState);
     }
 }
