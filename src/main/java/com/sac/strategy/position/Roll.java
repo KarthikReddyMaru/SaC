@@ -39,6 +39,7 @@ public class Roll implements PositionSelectionHandlerStrategy {
             gameState.setActionPendingOn(null);
             gameState.setCurrentPlayerId(opponentPlayer);
             messageService.broadcastMessage(MessageFormat.rollMessage(opponentPlayer), roomId);
+            messageService.sendToSender(opponentPlayer, roomId, MessageFormat.rollAction());
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (position.getActor() == null) {
             gameState.setActionPending(true);
@@ -49,6 +50,7 @@ public class Roll implements PositionSelectionHandlerStrategy {
             gameState.setCurrentPlayerId(opponentPlayer);
             messageService.broadcastMessage(MessageFormat.spawnSuccessAction(currentPlayer, positionId), roomId);
             messageService.broadcastMessage(MessageFormat.rollMessage(opponentPlayer), roomId);
+            messageService.sendToSender(opponentPlayer, roomId, MessageFormat.rollAction());
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else {
             String infoMessageForOpponent = String.format("%s is performing action", currentPlayer);

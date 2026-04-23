@@ -3,6 +3,7 @@ package com.sac.service;
 import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.message.ServerResponse;
+import com.sac.strategy.position.PositionSelection;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
@@ -55,10 +56,18 @@ public class GameplayService {
         if (roomConnectionService.isFull(roomId) && !gameStateService.exists(roomId)) {
             GameState gameState = gameStateService.initializeGameState(roomId, new ArrayList<>(roomConnectionService.getPlayers(roomId)), gameMode);
             log.info("GameState initialized");
-            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
-            messageService.broadcastMessage(MessageFormat.chooseMessage(
-                    gameStateService.getGameState(roomId).getCurrentPlayerId()), roomId);
+            postGameInitialization(roomId, gameState);
         }
     }
 
+    private void postGameInitialization(String roomId, GameState gameState) {
+        if (gameState.getPositionSelection().equals(PositionSelection.ROLL)) {
+            String currentPlayerId = gameStateService.getGameState(roomId)
+                                                     .getCurrentPlayerId();
+            WebSocketSession currentPlayerSession = roomConnectionService.getPlayerSession(roomId, currentPlayerId);
+            messageService.broadcastMessage(MessageFormat.rollMessage(currentPlayerId), roomId);
+            messageService.sendToSender(currentPlayerSession, MessageFormat.rollAction());
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        }
+    }
 }
