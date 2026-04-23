@@ -33,15 +33,19 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (gameState.getActionPendingOn() == null ||
-            !gameState.isActionPending() ||
-            !gameState.getCurrentPlayerId().equals(username)) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+        if (baseCheck(webSocketSession, username, gameState)) {
             return false;
-        } else if (gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn()).getActor() != null) {
-            String errorMsg = "An actor already present in this position, choose different action";
-            messageService.sendToSender(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
-            return false;
+        } else {
+            Actor actor = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn())
+                                          .getActor();
+            if (actor != null) {
+                String errorMsg = "An actor already present in this position, choose different action";
+                messageService.sendToSender(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
+                messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                                  MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                      .name()));
+                return false;
+            }
         }
         return true;
     }
@@ -53,30 +57,39 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
-        Integer opponentPositionId = context.getDestinationPosition();
 
-        if (!gameState.isActionPending() ||
-            !gameState.getCurrentPlayerId().equals(username) ||
-            gameState.getActionPendingOn() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        } else if (opponentPositionId == null && context.getSourcePosition() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
+        if (baseCheck(webSocketSession, username, gameState)) {
             return false;
         }
 
         Position position = gameState.getPlayerPosition(username, gameState.getActionPendingOn());
         Actor actor = position.getActor();
 
+        if (context.getDestinationPosition() == null && context.getSourcePosition() == null) {
+            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
+            return false;
+        }
+
         if (actor == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(gameState.getActionPendingOn()));
             return false;
-        } else if (!actor.getAllowedActions().contains(context.getGameAction())) {
-            messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
-                    actor.getCurrentState(), context.getGameAction()));
+        } else if (!actor.getAllowedActions()
+                         .contains(context.getGameAction())) {
+            messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(actor.getCurrentState(),
+                                                                                           context.getGameAction()));
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
-        } else if (context.getSourcePosition() != null && gameState.getActionPendingOn().equals(context.getSourcePosition())) {
+        } else if (context.getSourcePosition() != null && gameState.getActionPendingOn()
+                                                                   .equals(context.getSourcePosition())) {
             messageService.sendToSender(webSocketSession, "You cannot perform Kamikaze on the same position");
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
         }
         return true;
@@ -90,13 +103,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Specialization requestedTransition = actionContext.getSpecialization();
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (gameState.getActionPendingOn() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        } else if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        }
+        if (baseCheck(webSocketSession, username, gameState)) return false;
 
         Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
         Actor actor = position.getActor();
@@ -106,18 +113,26 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             return false;
         } else if (requestedTransition == null) {
             messageService.sendToSender(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
-        } else if (!actor.getAllowedTransitions().contains(requestedTransition) || actor.getCurrentState().equals(requestedTransition)) {
-            String errorMessage = String.format("%s cannot EVOLVE to %s",
-                                                actor.getCurrentState(), requestedTransition);
+        } else if (!actor.getAllowedTransitions()
+                         .contains(requestedTransition) || actor.getCurrentState()
+                                                                .equals(requestedTransition)) {
+            String errorMessage = String.format("%s cannot EVOLVE to %s", actor.getCurrentState(), requestedTransition);
             messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
         }
         return true;
     }
 
     @Override
-    public boolean visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession, ActionContext actionContext) {
+    public boolean visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession,
+                         ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
@@ -125,32 +140,51 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         GameState gameState = gameStateService.getGameState(roomId);
         Integer playerPositionId = gameState.getActionPendingOn();
 
-        if (!gameState.isActionPending() || !gameState.getCurrentPlayerId().equals(username)) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        } else if (gameState.getActionPendingOn() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
-            return false;
-        }
+        if (baseCheck(webSocketSession, username, gameState)) return false;
 
         Position playerPosition = gameState.getPlayerPosition(username, playerPositionId);
-        Actor playerActor = playerPosition.getActor();
+        Actor actor = playerPosition.getActor();
         Integer opponentPositionId = actionContext.getDestinationPosition();
 
-        if (playerActor == null) {
+        if (actor == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(playerPosition.getPositionId()));
             return false;
-        } else if (!playerActor.getAllowedActions().contains(attackAndCapture.getActionType())) {
-            messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(
-                    playerActor.getCurrentState(), attackAndCapture.getActionType()));
+        } else if (!actor.getAllowedActions()
+                         .contains(attackAndCapture.getActionType())) {
+            messageService.sendToSender(webSocketSession,
+                                        MessageFormat.actorCannotPerform(actor.getCurrentState(),
+                                                                         attackAndCapture.getActionType()));
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
         } else if (opponentPositionId == null) {
             messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
-        } else if (gameState.getOpponentPosition(username, opponentPositionId).isCapturedByOpponent()) {
+        } else if (gameState.getOpponentPosition(username, opponentPositionId)
+                            .isCapturedByOpponent()) {
             messageService.sendToSender(webSocketSession, MessageFormat.capturedTrouble(username, opponentPositionId));
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+                                                                                                  .name()));
             return false;
         }
         return true;
+    }
+
+    private boolean baseCheck(WebSocketSession webSocketSession, String username, GameState gameState) {
+        if (gameState.getActionPendingOn() == null ||
+            !gameState.isActionPending() ||
+            !gameState.getCurrentPlayerId()
+                      .equals(username)) {
+            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            if (username.equals(gameState.getCurrentPlayerId()))
+                messageService.sendToSender(webSocketSession, MessageFormat.rollAction());
+            return true;
+        }
+        return false;
     }
 }

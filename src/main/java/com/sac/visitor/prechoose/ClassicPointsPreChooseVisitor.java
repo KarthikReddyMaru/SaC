@@ -44,15 +44,19 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
             messageService.sendToSender(webSocketSession,
                                         MessageFormat.systemError(errorMsg),
                                         ServerResponse.Type.ERROR);
+            String actorType = gameState.getPlayerPosition(username, gameState.getActionPendingOn())
+                                        .getActor()
+                                        .getCurrentState()
+                                        .name();
             messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(username));
+                                                              MessageFormat.retryActionAgain(actorType));
             return false;
         } else if (rolledNumber < 1 || rolledNumber > maxPositionsPerPlayer) {
             String errorMsg = "Only positions from 1 to " + maxPositionsPerPlayer + " are allowed";
             messageService.sendToSender(webSocketSession,
                                         MessageFormat.systemError(errorMsg),
                                         ServerResponse.Type.ERROR);
-            messageService.sendServerResponseAsStringToSender(webSocketSession, MessageFormat.rollAgain(username));
+            messageService.sendToSender(webSocketSession, MessageFormat.rollAction());
             return false;
         }
         return true;
