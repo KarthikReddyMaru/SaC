@@ -38,6 +38,6 @@ public class ActionEnvelopeHandler implements EnvelopeHandler {
             Mode mode = gameModeHandlerRegistry.getInstance(gameMode);
             mode.performAction(webSocketSession, actionContext, roomId);
         } else
-            messageService.sendToSender(webSocketSession, "Game not initialized yet", ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession, "Game not initialized yet", ServerResponse.Type.ERROR);
     }
 }

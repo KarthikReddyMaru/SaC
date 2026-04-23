@@ -66,7 +66,7 @@ public class GameplayService {
                                                      .getCurrentPlayerId();
             WebSocketSession currentPlayerSession = roomConnectionService.getPlayerSession(roomId, currentPlayerId);
             messageService.broadcastMessage(MessageFormat.rollMessage(currentPlayerId), roomId);
-            messageService.sendToSender(currentPlayerSession, MessageFormat.rollAction());
+            messageService.sendRawPayload(currentPlayerSession, MessageFormat.rollAction());
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         }
     }

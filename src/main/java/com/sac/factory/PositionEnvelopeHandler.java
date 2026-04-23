@@ -39,6 +39,6 @@ public class PositionEnvelopeHandler implements EnvelopeHandler {
             Mode mode = gameModeHandlerRegistry.getInstance(gameMode);
             mode.performChoose(webSocketSession, positionContext);
         } else
-            messageService.sendToSender(webSocketSession, "Game not initialized yet", ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession, "Game not initialized yet", ServerResponse.Type.ERROR);
     }
 }

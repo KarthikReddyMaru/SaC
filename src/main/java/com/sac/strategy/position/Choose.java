@@ -46,13 +46,13 @@ public class Choose implements PositionSelectionHandlerStrategy {
             String respondedPlayerId = SocketSessionUtil.getUserNameFromSession(webSocketSession);
             Map<String, Integer> respondedPlayers = roomsRespondedPlayers.get(roomId);
             if (respondedPlayers.containsKey(respondedPlayerId)) {
-                messageService.sendToSender(
+                messageService.sendSystemMessage(
                         webSocketSession,
                         "Your response is already recorded, wait for opponent",
                         ServerResponse.Type.ERROR);
             } else {
                 respondedPlayers.put(respondedPlayerId, positionContext.getPosition());
-                messageService.sendToSender(webSocketSession, "Your response is recorded as " + positionContext.getPosition());
+                messageService.sendSystemMessage(webSocketSession, "Your response is recorded as " + positionContext.getPosition());
                 messageService.sendMessage(webSocketSession, MessageFormat.chosenResponseMessage(respondedPlayerId), roomId);
                 int totalPlayersInTheRoom = gameState.getPlayerCount();
                 if (totalPlayersInTheRoom == respondedPlayers.size())
@@ -65,16 +65,16 @@ public class Choose implements PositionSelectionHandlerStrategy {
         if (gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
                             gameState.getCurrentPlayerId());
-            messageService.sendToSender(webSocketSession,
-                    MessageFormat.systemError(errorMsg),
-                    ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession,
+                                             MessageFormat.systemError(errorMsg),
+                                             ServerResponse.Type.ERROR);
             return false;
         }
         if (chosenNumber < 1 || chosenNumber > maxPositionsPerPlayer) {
             String errorMsg = "Only positions from 1 to " + maxPositionsPerPlayer + " are allowed";
-            messageService.sendToSender(webSocketSession,
-                    MessageFormat.systemError(errorMsg),
-                    ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession,
+                                             MessageFormat.systemError(errorMsg),
+                                             ServerResponse.Type.ERROR);
             return false;
         }
         return true;

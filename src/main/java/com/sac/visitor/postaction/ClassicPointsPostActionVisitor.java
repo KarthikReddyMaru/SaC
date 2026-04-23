@@ -53,7 +53,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPending(false);
         gameState.setCurrentPlayerId(opponent);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
-        messageService.sendToSender(opponent, roomId, MessageFormat.rollAction());
+        messageService.sendRawPayload(opponent, roomId, MessageFormat.rollAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -78,7 +78,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponent);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
-        messageService.sendToSender(opponent, roomId, MessageFormat.rollAction());
+        messageService.sendRawPayload(opponent, roomId, MessageFormat.rollAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -92,8 +92,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String opponent = gameState.getOpponent(username).getUsername();
         Integer opponentPositionId = actionContext.getDestinationPosition();
 
-        messageService.sendToSender(webSocketSession,
-                                    MessageFormat.captureSuccessAction(username, opponent,
+        messageService.sendRawPayload(webSocketSession,
+                                         MessageFormat.captureSuccessAction(username, opponent,
                                                                        opponentPositionId));
 
         pointsService.addPoints(roomId, username, attackAndCapture.pointsForSuccessfulAction());
@@ -101,7 +101,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPendingOn(null);
         gameState.setActionPending(false);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
-        messageService.sendToSender(opponent, roomId, MessageFormat.rollAction());
+        messageService.sendRawPayload(opponent, roomId, MessageFormat.rollAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 }

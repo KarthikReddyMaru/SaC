@@ -56,7 +56,7 @@ public class MessageService {
         }
     }
 
-    public void sendToSender(WebSocketSession session, String message) {
+    public void sendSystemMessage(WebSocketSession session, String message) {
         if (session.isOpen()) {
             ServerResponse response = new ServerResponse(ServerResponse.Type.MESSAGE, "System", message);
             try {
@@ -67,12 +67,12 @@ public class MessageService {
         }
     }
 
-    public void sendToSender(String username, String roomId, String message) {
+    public void sendRawPayload(String username, String roomId, String message) {
         WebSocketSession webSocketSession = roomConnectionService.getPlayerSession(roomId, username);
-        sendToSender(webSocketSession, message);
+        sendRawPayload(webSocketSession, message);
     }
 
-    public void sendServerResponseAsStringToSender(WebSocketSession session, String message) {
+    public void sendRawPayload(WebSocketSession session, String message) {
         if (session.isOpen()) {
             try {
                 session.sendMessage(new TextMessage(message));
@@ -82,18 +82,7 @@ public class MessageService {
         }
     }
 
-    public void sendMessage(WebSocketSession senderSession, String message, String roomId, ServerResponse.Type type) throws IOException {
-        Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
-        String username = SocketSessionUtil.getUserNameFromSession(senderSession);
-        for (WebSocketSession session : sessions) {
-            if (!session.equals(senderSession) && session.isOpen()) {
-                ServerResponse response = new ServerResponse(type, username, message);
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
-            }
-        }
-    }
-
-    public void sendToSender(WebSocketSession session, String message, ServerResponse.Type type) {
+    public void sendSystemMessage(WebSocketSession session, String message, ServerResponse.Type type) {
         if (session.isOpen()) {
             ServerResponse response = new ServerResponse(type, "System", message);
             try {

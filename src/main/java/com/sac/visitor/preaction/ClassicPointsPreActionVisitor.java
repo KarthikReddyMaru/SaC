@@ -40,9 +40,9 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                           .getActor();
             if (actor != null) {
                 String errorMsg = "An actor already present in this position, choose different action";
-                messageService.sendToSender(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
-                messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                                  MessageFormat.retryActionAgain(actor.getCurrentState()
+                messageService.sendSystemMessage(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
+                messageService.sendRawPayload(webSocketSession,
+                                              MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                       .name()));
                 return false;
             }
@@ -66,29 +66,29 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Actor actor = position.getActor();
 
         if (context.getDestinationPosition() == null && context.getSourcePosition() == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noDestinationProvided());
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         }
 
         if (actor == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(gameState.getActionPendingOn()));
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(gameState.getActionPendingOn()));
             return false;
         } else if (!actor.getAllowedActions()
                          .contains(context.getGameAction())) {
-            messageService.sendToSender(webSocketSession, MessageFormat.actorCannotPerform(actor.getCurrentState(),
-                                                                                           context.getGameAction()));
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendRawPayload(webSocketSession, MessageFormat.actorCannotPerform(actor.getCurrentState(),
+                                                                                                context.getGameAction()));
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         } else if (context.getSourcePosition() != null && gameState.getActionPendingOn()
                                                                    .equals(context.getSourcePosition())) {
-            messageService.sendToSender(webSocketSession, "You cannot perform Kamikaze on the same position");
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendSystemMessage(webSocketSession, "You cannot perform Kamikaze on the same position");
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         }
@@ -109,21 +109,21 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Actor actor = position.getActor();
 
         if (actor == null) {
-            messageService.sendToSender(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
             return false;
         } else if (requestedTransition == null) {
-            messageService.sendToSender(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendSystemMessage(webSocketSession, "Choose Specialization to evolve", ServerResponse.Type.ERROR);
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         } else if (!actor.getAllowedTransitions()
                          .contains(requestedTransition) || actor.getCurrentState()
                                                                 .equals(requestedTransition)) {
             String errorMessage = String.format("%s cannot EVOLVE to %s", actor.getCurrentState(), requestedTransition);
-            messageService.sendToSender(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendSystemMessage(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         }
@@ -147,28 +147,28 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Integer opponentPositionId = actionContext.getDestinationPosition();
 
         if (actor == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noActorPresent(playerPosition.getPositionId()));
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(playerPosition.getPositionId()));
             return false;
         } else if (!actor.getAllowedActions()
                          .contains(attackAndCapture.getActionType())) {
-            messageService.sendToSender(webSocketSession,
-                                        MessageFormat.actorCannotPerform(actor.getCurrentState(),
+            messageService.sendRawPayload(webSocketSession,
+                                             MessageFormat.actorCannotPerform(actor.getCurrentState(),
                                                                          attackAndCapture.getActionType()));
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         } else if (opponentPositionId == null) {
-            messageService.sendToSender(webSocketSession, MessageFormat.noDestinationProvided());
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noDestinationProvided());
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         } else if (gameState.getOpponentPosition(username, opponentPositionId)
                             .isCapturedByOpponent()) {
-            messageService.sendToSender(webSocketSession, MessageFormat.capturedTrouble(username, opponentPositionId));
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actor.getCurrentState()
+            messageService.sendRawPayload(webSocketSession, MessageFormat.capturedTrouble(username, opponentPositionId));
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actor.getCurrentState()
                                                                                                   .name()));
             return false;
         }
@@ -180,9 +180,9 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             !gameState.isActionPending() ||
             !gameState.getCurrentPlayerId()
                       .equals(username)) {
-            messageService.sendToSender(webSocketSession, MessageFormat.illegalAction());
+            messageService.sendRawPayload(webSocketSession, MessageFormat.illegalAction());
             if (username.equals(gameState.getCurrentPlayerId()))
-                messageService.sendToSender(webSocketSession, MessageFormat.rollAction());
+                messageService.sendRawPayload(webSocketSession, MessageFormat.rollAction());
             return true;
         }
         return false;

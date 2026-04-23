@@ -36,27 +36,27 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
                       .equals(username)) {
             String message = String.format("Wait for your turn, %s's turn now", gameState.getOpponent(username)
                                                                                          .getUsername());
-            messageService.sendToSender(webSocketSession, message, ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession, message, ServerResponse.Type.ERROR);
             return false;
         } else if (gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
                                             gameState.getCurrentPlayerId());
-            messageService.sendToSender(webSocketSession,
-                                        MessageFormat.systemError(errorMsg),
-                                        ServerResponse.Type.ERROR);
+            messageService.sendSystemMessage(webSocketSession,
+                                             MessageFormat.systemError(errorMsg),
+                                             ServerResponse.Type.ERROR);
             String actorType = gameState.getPlayerPosition(username, gameState.getActionPendingOn())
                                         .getActor()
                                         .getCurrentState()
                                         .name();
-            messageService.sendServerResponseAsStringToSender(webSocketSession,
-                                                              MessageFormat.retryActionAgain(actorType));
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.retryActionAgain(actorType));
             return false;
         } else if (rolledNumber < 1 || rolledNumber > maxPositionsPerPlayer) {
             String errorMsg = "Only positions from 1 to " + maxPositionsPerPlayer + " are allowed";
-            messageService.sendToSender(webSocketSession,
-                                        MessageFormat.systemError(errorMsg),
-                                        ServerResponse.Type.ERROR);
-            messageService.sendToSender(webSocketSession, MessageFormat.rollAction());
+            messageService.sendSystemMessage(webSocketSession,
+                                             MessageFormat.systemError(errorMsg),
+                                             ServerResponse.Type.ERROR);
+            messageService.sendRawPayload(webSocketSession, MessageFormat.rollAction());
             return false;
         }
         return true;
