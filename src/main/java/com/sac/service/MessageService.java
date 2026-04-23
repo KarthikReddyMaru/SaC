@@ -22,8 +22,11 @@ public class MessageService {
         Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
         for (WebSocketSession session : sessions) {
             if (session.isOpen()) {
-                try { session.sendMessage(new TextMessage(message)); }
-                catch (IOException e) { throw new RuntimeException(e); }
+                try {
+                    session.sendMessage(new TextMessage(message));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -56,8 +59,21 @@ public class MessageService {
     public void sendToSender(WebSocketSession session, String message) {
         if (session.isOpen()) {
             ServerResponse response = new ServerResponse(ServerResponse.Type.MESSAGE, "System", message);
-            try { session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response))); }
-            catch (IOException e) { throw new RuntimeException(e); }
+            try {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void sendServerResponseAsStringToSender(WebSocketSession session, String message) {
+        if (session.isOpen()) {
+            try {
+                session.sendMessage(new TextMessage(message));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -75,8 +91,11 @@ public class MessageService {
     public void sendToSender(WebSocketSession session, String message, ServerResponse.Type type) {
         if (session.isOpen()) {
             ServerResponse response = new ServerResponse(type, "System", message);
-            try { session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response))); }
-            catch (IOException e) { throw new RuntimeException(e); }
+            try {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

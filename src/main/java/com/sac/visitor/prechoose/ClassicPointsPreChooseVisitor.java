@@ -32,24 +32,27 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
         GameState gameState = gameStateService.getGameState(roomId);
         int rolledNumber = positionContext.getPosition();
 
-        if (!gameState.getCurrentPlayerId().equals(username)) {
-            String message = String.format("Wait for your turn, %s's turn now", gameState.getOpponent(username).getUsername());
+        if (!gameState.getCurrentPlayerId()
+                      .equals(username)) {
+            String message = String.format("Wait for your turn, %s's turn now", gameState.getOpponent(username)
+                                                                                         .getUsername());
             messageService.sendToSender(webSocketSession, message, ServerResponse.Type.ERROR);
             return false;
-        }
-        else if (gameState.isActionPending()) {
+        } else if (gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
                                             gameState.getCurrentPlayerId());
             messageService.sendToSender(webSocketSession,
                                         MessageFormat.systemError(errorMsg),
                                         ServerResponse.Type.ERROR);
+            messageService.sendServerResponseAsStringToSender(webSocketSession,
+                                                              MessageFormat.retryActionAgain(username));
             return false;
-        }
-        else if (rolledNumber < 1 || rolledNumber > maxPositionsPerPlayer) {
+        } else if (rolledNumber < 1 || rolledNumber > maxPositionsPerPlayer) {
             String errorMsg = "Only positions from 1 to " + maxPositionsPerPlayer + " are allowed";
             messageService.sendToSender(webSocketSession,
                                         MessageFormat.systemError(errorMsg),
                                         ServerResponse.Type.ERROR);
+            messageService.sendServerResponseAsStringToSender(webSocketSession, MessageFormat.rollAgain(username));
             return false;
         }
         return true;
