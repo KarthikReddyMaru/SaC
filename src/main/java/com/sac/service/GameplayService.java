@@ -64,9 +64,8 @@ public class GameplayService {
         if (gameState.getPositionSelection().equals(PositionSelection.ROLL)) {
             String currentPlayerId = gameStateService.getGameState(roomId)
                                                      .getCurrentPlayerId();
-            WebSocketSession currentPlayerSession = roomConnectionService.getPlayerSession(roomId, currentPlayerId);
+            gameState.setState(GameState.State.ROLL);
             messageService.broadcastMessage(MessageFormat.rollMessage(currentPlayerId), roomId);
-            messageService.sendRawPayload(currentPlayerSession, MessageFormat.rollAction());
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         }
     }

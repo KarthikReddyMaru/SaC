@@ -24,6 +24,8 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.List;
 
+import static com.sac.model.GameState.GameplayStatus.FINISHED;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -49,7 +51,7 @@ public class ClassicPoints implements Mode {
                                          .filter(player -> player.getPoints() >= pointsToReach)
                                          .findFirst().orElse(null);
         if (winner != null) {
-            gameState.setStatus(GameState.Status.FINISHED);
+            gameState.setGameplayStatus(FINISHED);
             return winner.getUsername();
         }
         return null;
@@ -78,7 +80,7 @@ public class ClassicPoints implements Mode {
             if (winner != null) {
                 GameState gameState = gameStateService.getGameState(roomId);
                 log.info("Game completed, preparing to close connections of room - {}", roomId);
-                gameState.setStatus(GameState.Status.FINISHED);
+                gameState.setGameplayStatus(FINISHED);
                 gameState.setWinner(winner);
                 gameState.setActionPendingOn(null);
                 gameState.setCurrentPlayerId(null);

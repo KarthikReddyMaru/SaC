@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 import static com.sac.model.GameMode.PICKER_POINTS;
+import static com.sac.model.GameState.GameplayStatus.FINISHED;
 
 @Component
 @RequiredArgsConstructor
@@ -26,7 +27,7 @@ public class Points implements Mode {
                 .filter(player -> player.getPoints() >= pointsToReach)
                 .findFirst().orElse(null);
         if (winner != null) {
-            gameState.setStatus(GameState.Status.FINISHED);
+            gameState.setGameplayStatus(FINISHED);
             return winner.getUsername();
         }
         return null;

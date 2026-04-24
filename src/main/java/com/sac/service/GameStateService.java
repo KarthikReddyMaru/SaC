@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.sac.model.GameState.GameplayStatus;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,7 +33,9 @@ public class GameStateService {
                     .currentPlayerId(players.getFirst())
                     .actionPending(false)
                     .actionPendingOn(null)
-                    .status(GameState.Status.PLAYING)
+                    .actionPendingOnActor(null)
+                    .gameplayStatus(GameplayStatus.PLAYING)
+                    .state(null)
                     .gameMode(gameMode)
                     .positionSelection(PositionSelection.ROLL)
                     .playerCount(players.size())
