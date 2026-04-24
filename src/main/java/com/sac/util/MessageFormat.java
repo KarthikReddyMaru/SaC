@@ -80,10 +80,6 @@ public class MessageFormat {
         return createJson(Type.INFO, message);
     }
 
-    public static String rollAction() {
-        return createJson(Type.SELECT_POSITION, "ROLL");
-    }
-
     /**
      * Perform Action
      */
@@ -166,7 +162,7 @@ public class MessageFormat {
      */
 
     public static String gameState(GameState gameState) {
-        return createJson(gameState);
+        return createJson(Type.STATE, gameState);
     }
 
     public static String endGameWithWinner(GameState gameState) {
