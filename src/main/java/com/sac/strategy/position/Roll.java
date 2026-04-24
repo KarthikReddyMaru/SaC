@@ -14,6 +14,8 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 
+import static com.sac.model.GameState.State.ROLL;
+
 @Component
 @RequiredArgsConstructor
 public class Roll implements PositionSelectionHandlerStrategy {
@@ -38,8 +40,8 @@ public class Roll implements PositionSelectionHandlerStrategy {
             gameState.setActionPending(false);
             gameState.setActionPendingOn(null);
             gameState.setCurrentPlayerId(opponentPlayer);
+            gameState.setState(ROLL);
             messageService.broadcastMessage(MessageFormat.rollMessage(opponentPlayer), roomId);
-            messageService.sendRawPayload(opponentPlayer, roomId, MessageFormat.rollAction());
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (position.getActor() == null) {
             gameState.setActionPending(true);
@@ -47,10 +49,10 @@ public class Roll implements PositionSelectionHandlerStrategy {
             spawn.performAction(webSocketSession, null, roomId);
             gameState.setActionPending(false);
             gameState.setActionPendingOn(null);
+            gameState.setState(ROLL);
             gameState.setCurrentPlayerId(opponentPlayer);
             messageService.broadcastMessage(MessageFormat.spawnSuccessAction(currentPlayer, positionId), roomId);
             messageService.broadcastMessage(MessageFormat.rollMessage(opponentPlayer), roomId);
-            messageService.sendRawPayload(opponentPlayer, roomId, MessageFormat.rollAction());
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else {
             String infoMessageForOpponent = String.format("%s is performing action", currentPlayer);

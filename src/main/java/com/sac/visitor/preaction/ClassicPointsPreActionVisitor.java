@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import static com.sac.model.GameState.State.ROLL;
+
 @Component
 @RequiredArgsConstructor
 public class ClassicPointsPreActionVisitor implements PreActionVisitor {
@@ -203,7 +205,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                       .equals(username)) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.illegalAction());
             if (username.equals(gameState.getCurrentPlayerId()))
-                messageService.sendRawPayload(webSocketSession, MessageFormat.rollAction());
+                gameState.setState(ROLL);
             return true;
         }
         return false;

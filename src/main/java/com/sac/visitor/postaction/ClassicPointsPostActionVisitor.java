@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import static com.sac.model.GameState.State.ROLL;
+
 @Component
 @RequiredArgsConstructor
 public class ClassicPointsPostActionVisitor implements PostActionVisitor {
@@ -53,8 +55,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPendingOn(null);
         gameState.setActionPending(false);
         gameState.setCurrentPlayerId(opponent);
+        gameState.setState(ROLL);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
-        messageService.sendRawPayload(opponent, roomId, MessageFormat.rollAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -78,8 +80,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponent);
+        gameState.setState(ROLL);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
-        messageService.sendRawPayload(opponent, roomId, MessageFormat.rollAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -101,8 +103,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setCurrentPlayerId(username);
         gameState.setActionPendingOn(null);
         gameState.setActionPending(false);
+        gameState.setState(ROLL);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
-        messageService.sendRawPayload(opponent, roomId, MessageFormat.rollAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 }

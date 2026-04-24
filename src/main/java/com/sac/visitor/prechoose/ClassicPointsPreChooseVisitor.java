@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import static com.sac.model.GameState.State.ROLL;
+
 @Component
 @RequiredArgsConstructor
 public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
@@ -38,7 +40,7 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
                                                                                          .getUsername());
             messageService.sendSystemMessage(webSocketSession, message, ServerResponse.Type.ERROR);
             return false;
-        } else if (gameState.isActionPending()) {
+        } else if (!gameState.getState().equals(ROLL) || gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
                                             gameState.getCurrentPlayerId());
             messageService.sendSystemMessage(webSocketSession,
@@ -56,7 +58,7 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
             messageService.sendSystemMessage(webSocketSession,
                                              MessageFormat.systemError(errorMsg),
                                              ServerResponse.Type.ERROR);
-            messageService.sendRawPayload(webSocketSession, MessageFormat.rollAction());
+            gameState.setState(ROLL);
             return false;
         }
         return true;
