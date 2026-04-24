@@ -63,7 +63,7 @@ public class ChosenResponseService {
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponentName);
-        messageService.broadcastMessage(MessageFormat.chooseMessage(opponentName), roomId);
+//        messageService.broadcastMessage(MessageFormat.chooseMessage(opponentName), roomId);
     }
 
 }

@@ -47,9 +47,6 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             if (actor != null) {
                 String errorMsg = "An actor already present in this position, choose different action";
                 messageService.sendSystemMessage(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
-                messageService.sendRawPayload(webSocketSession,
-                                              MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                                  .name()));
                 return false;
             }
         }
@@ -73,9 +70,6 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         if (context.getDestinationPosition() == null && context.getSourcePosition() == null) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         }
 
@@ -84,9 +78,6 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             (context.getDestinationPosition() != null &&
              (context.getDestinationPosition() < 1 || context.getDestinationPosition() > maxPositionPerPlayer))) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
 
         }
 
@@ -98,16 +89,10 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                          .contains(context.getGameAction())) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.actorCannotPerform(actor.getCurrentState(),
                                                                                              context.getGameAction()));
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         } else if (context.getSourcePosition() != null && gameState.getActionPendingOn()
                                                                    .equals(context.getSourcePosition())) {
             messageService.sendSystemMessage(webSocketSession, "You cannot perform Kamikaze on the same position");
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         }
         return true;
@@ -132,18 +117,12 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         } else if (requestedTransition == null) {
             messageService.sendSystemMessage(webSocketSession, "Choose Specialization to evolve",
                                              ServerResponse.Type.ERROR);
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         } else if (!actor.getAllowedTransitions()
                          .contains(requestedTransition) || actor.getCurrentState()
                                                                 .equals(requestedTransition)) {
             String errorMessage = String.format("%s cannot EVOLVE to %s", actor.getCurrentState(), requestedTransition);
             messageService.sendSystemMessage(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         }
         return true;
@@ -174,25 +153,16 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.actorCannotPerform(actor.getCurrentState(),
                                                                            attackAndCapture.getActionType()));
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         } else if (opponentPositionId == null ||
                    (actionContext.getDestinationPosition() < 1 ||
                     actionContext.getDestinationPosition() > maxPositionPerPlayer)) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         } else if (gameState.getOpponentPosition(username, opponentPositionId)
                             .isCapturedByOpponent()) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.capturedTrouble(username, opponentPositionId));
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.retryActionAgain(actor.getCurrentState()
-                                                                              .name()));
             return false;
         }
         return true;

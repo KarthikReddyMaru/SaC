@@ -40,6 +40,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponent);
+        gameState.setActionPendingOnActor(null);
+        gameState.setState(ROLL);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -55,6 +57,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPendingOn(null);
         gameState.setActionPending(false);
         gameState.setCurrentPlayerId(opponent);
+        gameState.setActionPendingOnActor(null);
         gameState.setState(ROLL);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
@@ -81,6 +84,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPendingOn(null);
         gameState.setCurrentPlayerId(opponent);
         gameState.setState(ROLL);
+        gameState.setActionPendingOnActor(null);
         messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
@@ -104,7 +108,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPendingOn(null);
         gameState.setActionPending(false);
         gameState.setState(ROLL);
-        messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
+        gameState.setActionPendingOnActor(null);
+        messageService.broadcastMessage(MessageFormat.rollMessage(username), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 }

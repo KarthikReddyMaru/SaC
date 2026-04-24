@@ -14,6 +14,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 
+import static com.sac.model.GameState.State.ACTION_REQUIRED;
 import static com.sac.model.GameState.State.ROLL;
 
 @Component
@@ -40,30 +41,33 @@ public class Roll implements PositionSelectionHandlerStrategy {
             gameState.setActionPending(false);
             gameState.setActionPendingOn(null);
             gameState.setCurrentPlayerId(opponentPlayer);
+            gameState.setActionPendingOnActor(null);
             gameState.setState(ROLL);
             messageService.broadcastMessage(MessageFormat.rollMessage(opponentPlayer), roomId);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (position.getActor() == null) {
             gameState.setActionPending(true);
             gameState.setActionPendingOn(positionId);
+            gameState.setActionPendingOnActor(null);
             spawn.performAction(webSocketSession, null, roomId);
             gameState.setActionPending(false);
             gameState.setActionPendingOn(null);
+            gameState.setActionPendingOnActor(null);
             gameState.setState(ROLL);
             gameState.setCurrentPlayerId(opponentPlayer);
             messageService.broadcastMessage(MessageFormat.spawnSuccessAction(currentPlayer, positionId), roomId);
             messageService.broadcastMessage(MessageFormat.rollMessage(opponentPlayer), roomId);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else {
-            String infoMessageForOpponent = String.format("%s is performing action", currentPlayer);
-            String actorType = position.getActor()
-                                       .getCurrentState()
-                                       .name();
-            messageService.sendRawPayload(webSocketSession, MessageFormat.performAction(actorType));
-            messageService.sendMessage(webSocketSession, infoMessageForOpponent, roomId);
             gameState.setCurrentPlayerId(currentPlayer);
             gameState.setActionPending(true);
             gameState.setActionPendingOn(positionId);
+            gameState.setState(ACTION_REQUIRED);
+            gameState.setActionPendingOnActor(position.getActor()
+                                                      .getCurrentState());
+            String infoMessageForOpponent = String.format("%s is performing action", currentPlayer);
+            messageService.sendMessage(webSocketSession, infoMessageForOpponent, roomId);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         }
     }
 
