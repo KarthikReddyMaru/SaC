@@ -60,11 +60,11 @@ public class MessageFormat {
     /**
      * Choose Messages
      */
-
-    public static String chooseMessage(String username) {
-        String message = String.format("Your turn to choose a position, %s!", username);
-        return createJson(Type.SELECT_POSITION, message);
-    }
+//
+//    public static String chooseMessage(String username) {
+//        String message = String.format("Your turn to choose a position, %s!", username);
+//        return createJson(Type.SELECT_POSITION, message);
+//    }
 
     public static String chosenResponseMessage(String username) {
         String message = String.format("%s has selected a position.", username);
@@ -78,14 +78,6 @@ public class MessageFormat {
     public static String rollMessage(String username) {
         String message = String.format("%s will roll the dice now", username);
         return createJson(Type.INFO, message);
-    }
-
-    /**
-     * Perform Action
-     */
-
-    public static String performAction(String actorType) {
-        return createJson(Type.ACTION_REQUIRED, actorType);
     }
 
     /**
@@ -151,11 +143,6 @@ public class MessageFormat {
         String message = String.format("%s committed a foul! (-1 Score)", username);
         return createJson(Type.ERROR, message);
     }
-
-    public static String retryActionAgain(String actorType) {
-        return createJson(Type.ACTION_REQUIRED, actorType);
-    }
-
 
     /**
      * Game States
