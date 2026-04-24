@@ -10,7 +10,7 @@ import lombok.Data;
 public class ActionContext {
 
     private GameAction gameAction;
-    private Integer sourcePosition; // Only for teleportation, unfreezing
+    private Integer sourcePosition; // Only for kamikaze for now
     private Integer destinationPosition;
     private Specialization specialization;
 

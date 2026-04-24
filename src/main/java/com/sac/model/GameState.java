@@ -1,5 +1,6 @@
 package com.sac.model;
 
+import com.sac.model.actor.Specialization;
 import com.sac.strategy.position.PositionSelection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,15 +18,22 @@ public class GameState {
     private String currentPlayerId;
     private boolean actionPending;
     private Integer actionPendingOn;
-    private Status status;
+    private Specialization actionPendingOnActor;
+    private GameplayStatus gameplayStatus;
+    private State state;
     private GameMode gameMode;
     private PositionSelection positionSelection;
     private String winner;
     private int totalMovesPlayed;
     private int totalAvailableMoves;
 
-    public enum Status {
+    public enum GameplayStatus {
         PLAYING, FINISHED
+    }
+
+    public enum State {
+        ROLL,
+        ACTION_REQUIRED
     }
 
     @Data
