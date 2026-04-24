@@ -28,20 +28,14 @@
         ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
-        /* Die Animation Class */
-        .rolling { animation: shake 0.2s infinite; }
+        /* Die Animation */
+        .rolling { animation: shake 0.15s infinite; }
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
+            25% { transform: translate(-1px, -2px) rotate(-2deg); }
+            50% { transform: translate(-3px, 0px) rotate(2deg); }
+            75% { transform: translate(3px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -1px) rotate(1deg); }
         }
     </style>
 </head>
@@ -66,6 +60,9 @@
             </button>
             <button onclick="simulateActionRequired()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">
                 Sim Action
+            </button>
+            <button id="btn-guide" onclick="toggleGuide()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2">
+                Guide: ON
             </button>
         </div>
     </div>
@@ -96,8 +93,8 @@
     </aside>
 
     <main class="flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
-        <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
 
+        <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
             <div class="flex items-stretch gap-4 md:gap-8 min-w-max py-4">
 
                 <div class="flex flex-col gap-4">
@@ -109,14 +106,15 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col w-44 md:w-60 pt-6">
-                    <div class="flex items-center w-full mb-auto mt-6">
+                <div class="flex flex-col w-44 md:w-60 justify-center h-full my-auto">
+
+                    <div class="flex items-center w-full mb-6">
                         <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent to-zinc-700"></div>
                         <span class="px-3 text-[10px] font-bold tracking-[0.25em] text-zinc-500 uppercase">Arena</span>
                         <div class="flex-1 h-[1px] bg-gradient-to-l from-transparent to-zinc-700"></div>
                     </div>
 
-                    <div id="dynamic-action-area" class="w-full bg-zinc-950/80 border border-dashed border-zinc-700 rounded-xl flex flex-col justify-center items-center text-center p-4 mt-8 shadow-inner min-h-[140px]">
+                    <div id="dynamic-action-area" class="w-full bg-zinc-950/80 border border-dashed border-zinc-700 rounded-xl flex flex-col justify-center items-center text-center p-4 shadow-inner min-h-[140px]">
                         <svg class="w-6 h-6 text-zinc-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"></rect>
                             <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle>
@@ -137,13 +135,24 @@
 
             </div>
         </div>
+
+        <div id="guide-panel" class="w-full bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto">
+            <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-3 md:gap-4">
+                <div class="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex-shrink-0">
+                    <span class="text-[10px] uppercase tracking-[0.1em] text-blue-400 font-bold">Commander's Guide</span>
+                </div>
+                <p id="guide-text" class="text-xs md:text-sm text-zinc-300 leading-relaxed text-left">
+                    Awaiting game initialization. Once connected, your strategic objectives will appear here.
+                </p>
+            </div>
+        </div>
+
     </main>
 
     <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col shadow-lg overflow-hidden h-[300px] lg:h-full">
         <div class="px-4 py-3 bg-zinc-900 border-b border-zinc-800 text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
             Comm-Link
         </div>
-
         <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
             <div class="flex flex-col gap-1 max-w-[85%]">
                 <span class="text-red-400 font-semibold text-[10px] uppercase tracking-wide">Player 2</span>
@@ -152,7 +161,6 @@
                 </div>
             </div>
         </div>
-
         <div class="p-3 bg-zinc-950/50 border-t border-zinc-800 flex gap-2">
             <input type="text" placeholder="Message..." class="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600">
             <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 rounded-lg transition-colors shadow-sm flex justify-center items-center">
@@ -165,6 +173,27 @@
 
 <script>
     const myUsername = "son";
+    let isGuideEnabled = true;
+
+    function toggleGuide() {
+        isGuideEnabled = !isGuideEnabled;
+        const btn = document.getElementById('btn-guide');
+        const panel = document.getElementById('guide-panel');
+
+        if (isGuideEnabled) {
+            btn.innerText = "Guide: ON";
+            btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2";
+            panel.style.display = 'block';
+        } else {
+            btn.innerText = "Guide: OFF";
+            btn.className = "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2";
+            panel.style.display = 'none';
+        }
+    }
+
+    function updateGuide(text) {
+        document.getElementById('guide-text').innerText = text;
+    }
 
     function updateGameState(gameState) {
         document.getElementById('hud-room').innerText = gameState.roomId;
@@ -232,39 +261,22 @@
     function injectDummyData() {
         const dummyPayload = {"type":"INFO","sender":"System","content":{"roomId":"room123","players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"FIGHTER"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"ryomen","actionPending":false,"actionPendingOn":null,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"}};
         updateGameState(dummyPayload.content);
-    }
+        updateGuide("Game loaded. It is Player 2's turn to act.");
 
-    /**
-     * Renders exactly identical buttons to prevent pre-selection bias.
-     */
-    function simulateActionRequired() {
-        const actionArea = document.getElementById('dynamic-action-area');
-
-        actionArea.innerHTML = `
-                <h3 class="text-amber-400 font-semibold mb-2 text-sm uppercase tracking-wide">Tactical Action</h3>
-                <p class="text-[11px] text-zinc-400 mb-5">You have a NOVICE at Position 3.</p>
-                <div class="grid grid-cols-2 gap-3 w-full px-2">
-                    <button class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full">
-                        Evolve
-                    </button>
-                    <button class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full">
-                        Kamikaze
-                    </button>
-                </div>
+        document.getElementById('dynamic-action-area').innerHTML = `
+                <span class="text-xs text-zinc-500 font-medium leading-relaxed">Waiting for opponent's move...</span>
             `;
     }
 
-    /**
-     * Renders the Mock Dice UI.
-     */
     function simulateRollRequired() {
-        const actionArea = document.getElementById('dynamic-action-area');
+        updateGuide("Roll the dice! If you land on an empty spot, you SPAWN a Novice. If you land on your unit, you unlock a Tactical Action.");
 
+        const actionArea = document.getElementById('dynamic-action-area');
         actionArea.innerHTML = `
                 <h3 class="text-blue-400 font-semibold mb-1 text-sm uppercase tracking-wide">Your Turn</h3>
-                <p class="text-[10px] text-zinc-500 mb-4 uppercase tracking-wider">Roll to determine position</p>
+                <p class="text-[10px] text-zinc-500 mb-4 uppercase tracking-wider">Determine target position</p>
 
-                <div class="flex gap-4 mb-5">
+                <div class="flex gap-4 mb-4">
                     <div id="die-1" class="w-12 h-12 bg-zinc-900 border border-zinc-700 rounded-xl flex justify-center items-center shadow-inner relative">
                         <span class="font-mono text-xl font-bold text-zinc-200">?</span>
                     </div>
@@ -279,9 +291,6 @@
             `;
     }
 
-    /**
-     * Simulates a dice roll animation through the faces 1, 2, 3, 4, 5, and [Empty]
-     */
     function executeRollAnimation(btn) {
         btn.disabled = true;
         btn.innerText = "ROLLING...";
@@ -291,11 +300,10 @@
         const d1Text = d1.querySelector('span');
         const d2Text = d2.querySelector('span');
 
-        // Add shake animation
         d1.classList.add('rolling');
         d2.classList.add('rolling');
 
-        const faces = ['1', '2', '3', '4', '5', '']; // '' represents the empty side
+        const faces = ['1', '2', '3', '4', '5', ''];
         let rolls = 0;
 
         const interval = setInterval(() => {
@@ -303,20 +311,41 @@
             d2Text.innerText = faces[Math.floor(Math.random() * faces.length)];
             rolls++;
 
-            if(rolls > 15) { // Stop after 15 rapid changes (~750ms)
+            if(rolls > 15) {
                 clearInterval(interval);
                 d1.classList.remove('rolling');
                 d2.classList.remove('rolling');
 
-                // Final Result Mock
                 d1Text.innerText = '4';
-                d2Text.innerText = ''; // Empty side
+                d2Text.innerText = '';
 
                 btn.innerText = "ROLLED: 4";
                 btn.classList.replace('bg-blue-600', 'bg-emerald-600');
                 btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
+
+                updateGuide("You rolled a 4! Position 4 is selected. Analyzing state...");
+
+                setTimeout(simulateActionRequired, 1500);
             }
         }, 50);
+    }
+
+    function simulateActionRequired() {
+        updateGuide("Position 4 contains a NOVICE. You may EVOLVE it to a Fighter, or perform KAMIKAZE to sacrifice it and destroy enemy position 4 (+1 PT).");
+
+        const actionArea = document.getElementById('dynamic-action-area');
+        actionArea.innerHTML = `
+                <h3 class="text-amber-400 font-semibold mb-2 text-sm uppercase tracking-wide">Tactical Action</h3>
+                <p class="text-[11px] text-zinc-400 mb-4">NOVICE selected at Position 4.</p>
+                <div class="grid grid-cols-2 gap-3 w-full px-2">
+                    <button class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full">
+                        Evolve
+                    </button>
+                    <button class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full">
+                        Kamikaze
+                    </button>
+                </div>
+            `;
     }
 
     // Initialize empty board on load
