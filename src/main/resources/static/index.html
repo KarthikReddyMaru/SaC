@@ -6,6 +6,7 @@
     <title>SaC: Tactical Command HUD</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
@@ -21,14 +22,15 @@
             }
         }
     </script>
+
     <style>
-        /* Custom Scrollbars */
+        /* Minimalist Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
-        /* Die Animation */
+        /* Dice Shaking Animation */
         .rolling { animation: shake 0.15s infinite; }
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
@@ -40,141 +42,275 @@
     </style>
 </head>
 
-<body class="bg-zinc-950 text-zinc-100 font-sans h-screen flex flex-col p-2 md:p-4 gap-4 overflow-y-auto lg:overflow-hidden selection:bg-blue-500/30">
+<body class="bg-zinc-950 text-zinc-100 font-sans h-screen overflow-hidden selection:bg-blue-500/30 relative">
 
-<header class="flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-wrap justify-between items-center gap-3 shadow-lg z-10">
-    <div class="flex flex-wrap items-center gap-2 md:gap-4">
-        <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400">
-            ROOM <span id="hud-room" class="text-zinc-100 ml-1">???</span>
-        </div>
-        <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400">
-            MODE <span id="hud-mode" class="text-zinc-100 ml-1">???</span>
+<div id="login-screen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950">
+
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col gap-6">
+
+        <div class="text-center space-y-2">
+            <h1 class="text-2xl font-bold tracking-widest text-zinc-100 uppercase">SaC Arena</h1>
+            <p class="text-xs text-zinc-500 tracking-widest uppercase">Tactical Command</p>
         </div>
 
-        <div class="flex gap-2 ml-2 md:ml-4">
-            <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">
-                Load State
-            </button>
-            <button onclick="simulateRollRequired()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">
-                Sim Roll
-            </button>
-            <button onclick="simulateActionRequired()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">
-                Sim Action
-            </button>
-            <button id="btn-guide" onclick="toggleGuide()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2">
-                Guide: ON
-            </button>
+        <div id="online-badge" class="hidden bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-3 py-1.5 rounded-full w-fit mx-auto flex items-center gap-2 shadow-inner uppercase tracking-wider">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+            <span id="online-count">0</span> Warriors Online
         </div>
+
+        <div class="flex flex-col gap-4 mt-2">
+            <div>
+                <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Callsign (Username)</label>
+                <input type="text" id="input-username" placeholder="e.g. son" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-700 shadow-inner">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Battlefield (Room ID)</label>
+                <input type="text" id="input-room" placeholder="e.g. room123" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-700 shadow-inner">
+            </div>
+        </div>
+
+        <button onclick="connectToServer()" class="mt-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-3.5 rounded-xl transition-all active:scale-95 shadow-lg w-full tracking-wide uppercase">
+            Establish Uplink
+        </button>
+
     </div>
+</div>
 
-    <div class="flex flex-wrap items-center gap-2 md:gap-4">
-        <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400">
-            TURN <span id="hud-turn" class="text-blue-400 ml-1">???</span>
+
+<div id="game-ui" class="hidden h-full flex-col p-2 md:p-4 gap-4">
+
+    <header class="flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-wrap justify-between items-center gap-3 shadow-lg z-10">
+        <div class="flex flex-wrap items-center gap-2 md:gap-4">
+            <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner">
+                ROOM <span id="hud-room" class="text-zinc-100 ml-1">???</span>
+            </div>
+            <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner">
+                MODE <span id="hud-mode" class="text-zinc-100 ml-1">???</span>
+            </div>
+
+            <div class="flex gap-2 ml-2 md:ml-4">
+                <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Load State</button>
+                <button onclick="simulateRollRequired()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Sim Roll</button>
+                <button onclick="simulateActionRequired()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Sim Action</button>
+                <button id="btn-guide" onclick="toggleGuide()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2">Guide: ON</button>
+            </div>
         </div>
-        <div id="hud-status" class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-500">
-            STATUS: Waiting...
+
+        <div class="flex flex-wrap items-center gap-2 md:gap-4">
+            <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner">
+                TURN <span id="hud-turn" class="text-blue-400 ml-1">???</span>
+            </div>
+            <div id="hud-status" class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-500 shadow-inner">
+                STATUS: Waiting...
+            </div>
         </div>
+    </header>
+
+    <div class="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
+
+        <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col shadow-lg overflow-hidden h-[250px] lg:h-full">
+            <div class="px-4 py-3 bg-zinc-900 border-b border-zinc-800 text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase flex justify-between items-center">
+                System Ticker
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+            </div>
+            <div id="system-logs" class="flex-1 p-3 overflow-y-auto flex flex-col gap-2">
+            </div>
+        </aside>
+
+        <main class="flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
+            <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
+                <div class="flex items-stretch gap-4 md:gap-8 min-w-max py-4">
+
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-center px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
+                            <span id="p1-name" class="text-sm font-semibold text-blue-400">Waiting...</span>
+                            <span id="p1-score" class="font-mono text-xs text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 shadow-inner">0 PTS</span>
+                        </div>
+                        <div id="p1-grid" class="grid grid-cols-2 gap-2.5"></div>
+                    </div>
+
+                    <div class="flex flex-col w-44 md:w-60 justify-center h-full my-auto">
+                        <div class="flex items-center w-full mb-6">
+                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent to-zinc-700"></div>
+                            <span class="px-3 text-[10px] font-bold tracking-[0.25em] text-zinc-500 uppercase">Arena</span>
+                            <div class="flex-1 h-[1px] bg-gradient-to-l from-transparent to-zinc-700"></div>
+                        </div>
+
+                        <div id="dynamic-action-area" class="w-full bg-zinc-950/80 border border-dashed border-zinc-700 rounded-xl flex flex-col justify-center items-center text-center p-4 shadow-inner min-h-[140px]">
+                            <svg class="w-6 h-6 text-zinc-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle>
+                                <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle>
+                            </svg>
+                            <span class="text-xs text-zinc-500 font-medium leading-relaxed">Awaiting Action...</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-center px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
+                            <span id="p2-score" class="font-mono text-xs text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 shadow-inner">0 PTS</span>
+                            <span id="p2-name" class="text-sm font-semibold text-red-400">Waiting...</span>
+                        </div>
+                        <div id="p2-grid" class="grid grid-cols-2 gap-2.5"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="guide-panel" class="w-full bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto">
+                <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-3 md:gap-4">
+                    <div class="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex-shrink-0 shadow-inner">
+                        <span class="text-[10px] uppercase tracking-[0.1em] text-blue-400 font-bold">Commander's Guide</span>
+                    </div>
+                    <p id="guide-text" class="text-xs md:text-sm text-zinc-300 leading-relaxed text-left">
+                        Please enter your Callsign and Battlefield ID to connect to the server.
+                    </p>
+                </div>
+            </div>
+        </main>
+
+        <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col shadow-lg overflow-hidden h-[300px] lg:h-full">
+            <div class="px-4 py-3 bg-zinc-900 border-b border-zinc-800 text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
+                Comm-Link
+            </div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
+            </div>
+            <div class="p-3 bg-zinc-950/50 border-t border-zinc-800 flex gap-2">
+                <input type="text" id="chat-input" placeholder="Message..." class="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500 transition-colors shadow-inner placeholder:text-zinc-600">
+                <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 rounded-lg transition-colors shadow-sm flex justify-center items-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </aside>
+
     </div>
-</header>
-
-<div class="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
-
-    <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col shadow-lg overflow-hidden h-[250px] lg:h-full">
-        <div class="px-4 py-3 bg-zinc-900 border-b border-zinc-800 text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase flex justify-between items-center">
-            System Ticker
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-        </div>
-        <div id="system-logs" class="flex-1 p-3 overflow-y-auto flex flex-col gap-2">
-            <div class="p-2.5 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-xs flex gap-2">
-                <span class="text-zinc-500 font-mono mt-0.5">[10:01]</span>
-                <span class="text-zinc-300">Connected to SaC Server.</span>
-            </div>
-        </div>
-    </aside>
-
-    <main class="flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
-
-        <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
-            <div class="flex items-stretch gap-4 md:gap-8 min-w-max py-4">
-
-                <div class="flex flex-col gap-4">
-                    <div class="flex justify-between items-center px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
-                        <span id="p1-name" class="text-sm font-semibold text-blue-400">Waiting...</span>
-                        <span id="p1-score" class="font-mono text-xs text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">0 PTS</span>
-                    </div>
-                    <div id="p1-grid" class="grid grid-cols-2 gap-2.5">
-                    </div>
-                </div>
-
-                <div class="flex flex-col w-44 md:w-60 justify-center h-full my-auto">
-
-                    <div class="flex items-center w-full mb-6">
-                        <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent to-zinc-700"></div>
-                        <span class="px-3 text-[10px] font-bold tracking-[0.25em] text-zinc-500 uppercase">Arena</span>
-                        <div class="flex-1 h-[1px] bg-gradient-to-l from-transparent to-zinc-700"></div>
-                    </div>
-
-                    <div id="dynamic-action-area" class="w-full bg-zinc-950/80 border border-dashed border-zinc-700 rounded-xl flex flex-col justify-center items-center text-center p-4 shadow-inner min-h-[140px]">
-                        <svg class="w-6 h-6 text-zinc-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"></rect>
-                            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle>
-                            <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle>
-                        </svg>
-                        <span class="text-xs text-zinc-500 font-medium leading-relaxed">Awaiting Action...</span>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-4">
-                    <div class="flex justify-between items-center px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
-                        <span id="p2-score" class="font-mono text-xs text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">0 PTS</span>
-                        <span id="p2-name" class="text-sm font-semibold text-red-400">Waiting...</span>
-                    </div>
-                    <div id="p2-grid" class="grid grid-cols-2 gap-2.5">
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <div id="guide-panel" class="w-full bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto">
-            <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-3 md:gap-4">
-                <div class="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex-shrink-0">
-                    <span class="text-[10px] uppercase tracking-[0.1em] text-blue-400 font-bold">Commander's Guide</span>
-                </div>
-                <p id="guide-text" class="text-xs md:text-sm text-zinc-300 leading-relaxed text-left">
-                    Awaiting game initialization. Once connected, your strategic objectives will appear here.
-                </p>
-            </div>
-        </div>
-
-    </main>
-
-    <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col shadow-lg overflow-hidden h-[300px] lg:h-full">
-        <div class="px-4 py-3 bg-zinc-900 border-b border-zinc-800 text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
-            Comm-Link
-        </div>
-        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
-            <div class="flex flex-col gap-1 max-w-[85%]">
-                <span class="text-red-400 font-semibold text-[10px] uppercase tracking-wide">Player 2</span>
-                <div class="bg-zinc-800/50 border border-zinc-700/50 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-zinc-200 shadow-sm">
-                    GLHF! Ready when you are.
-                </div>
-            </div>
-        </div>
-        <div class="p-3 bg-zinc-950/50 border-t border-zinc-800 flex gap-2">
-            <input type="text" placeholder="Message..." class="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600">
-            <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 rounded-lg transition-colors shadow-sm flex justify-center items-center">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-            </button>
-        </div>
-    </aside>
-
 </div>
 
 <script>
-    const myUsername = "son";
-    let isGuideEnabled = true;
+    // Global State Variables
+    let ws;                     // WebSocket connection
+    let myUsername = "";        // Stored on connect
+    let isGuideEnabled = true;  // Toggle state for Guide Panel
 
+    /**
+     * 1. INITIALIZATION ON LOAD
+     * Prepares empty boards and checks server for active players.
+     */
+    window.onload = () => {
+        // Render default empty 10x2 grids so UI looks complete
+        const emptyPositions = Array(11).fill(null);
+        renderGrid('p1-grid', emptyPositions);
+        renderGrid('p2-grid', emptyPositions);
+
+        // Hit backend REST endpoint
+        fetchOnlinePlayers();
+    };
+
+    /**
+     * 2. FETCH ONLINE PLAYERS (/online/players)
+     * Updates the login screen badge with real-time counts.
+     */
+    function fetchOnlinePlayers() {
+        fetch('/online/players')
+            .then(response => response.text()) // Use text() to safely catch raw integers
+            .then(count => {
+                if (count) {
+                    document.getElementById('online-count').innerText = count;
+                    document.getElementById('online-badge').classList.remove('hidden');
+                }
+            })
+            .catch(err => console.warn("Cannot reach MetadataController:", err));
+    }
+
+    /**
+     * 3. CONNECT TO WEBSOCKET
+     * Triggered by the "Establish Uplink" button on Login Screen.
+     */
+    function connectToServer() {
+        const user = document.getElementById('input-username').value.trim();
+        const room = document.getElementById('input-room').value.trim();
+
+        if (!user || !room) {
+            alert("Both Callsign and Battlefield ID are required.");
+            return;
+        }
+
+        myUsername = user; // Save globally
+
+        // Construct standard WebSocket URL. Uses current host seamlessly.
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/room?roomId=${room}&username=${user}`;
+
+        // NOTE FOR LOCAL TESTING: If running UI from plain file, uncomment below:
+        // const wsUrl = `ws://localhost:80/ws/room?roomId=${room}&username=${user}`;
+
+        // Open Connection
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            // UI Transition: Hide Login, Show Game
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            document.getElementById('game-ui').classList.add('flex');
+
+            // Initialize HUD Defaults
+            document.getElementById('hud-room').innerText = room;
+            document.getElementById('p1-name').innerText = user + " (You)";
+
+            appendSystemLog("info", "Uplink Established. Connected to Server.");
+            updateGuide("Connection secure. Awaiting game state from server...");
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                let msg = JSON.parse(event.data);
+
+                // Un-nest Java backend format if needed (based on previous provided code)
+                if (typeof msg.content === 'string' && msg.content.startsWith('{')) {
+                    try { msg.content = JSON.parse(msg.content); } catch (e) {}
+                }
+
+                // Route Message payload
+                if (msg.type === "STATE") updateGameState(msg.content);
+                else if (msg.type === "INFO") appendSystemLog("info", msg.content);
+                else if (msg.type === "ERROR") appendSystemLog("error", msg.content);
+                // ... Additional parsing logic from your existing handlers goes here ...
+
+            } catch (e) {
+                console.error("Message Parsing Error:", e);
+            }
+        };
+
+        ws.onclose = () => {
+            appendSystemLog("error", "Connection to Server Lost.");
+            updateGuide("Connection severed. Please refresh to reconnect.");
+        };
+    }
+
+    /**
+     * 4. UI: SYSTEM TICKER
+     * Adds a styled log entry to the left sidebar
+     */
+    function appendSystemLog(type, text) {
+        const container = document.getElementById('system-logs');
+        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        let colorClass = "bg-zinc-950/50 border-zinc-800/50 text-zinc-300 text-zinc-500"; // default
+        if (type === "error") colorClass = "bg-red-500/10 border-red-500/20 text-red-100 text-red-400";
+        if (type === "success") colorClass = "bg-emerald-500/10 border-emerald-500/20 text-emerald-100 text-emerald-400";
+
+        container.innerHTML += `
+                <div class="p-2.5 border rounded-lg text-xs flex gap-2 ${colorClass}">
+                    <span class="font-mono mt-0.5 opacity-75">[${time}]</span>
+                    <span>${text}</span>
+                </div>`;
+        container.scrollTop = container.scrollHeight; // Auto-scroll
+    }
+
+    /**
+     * 5. UI: TOGGLE GUIDE
+     */
     function toggleGuide() {
         isGuideEnabled = !isGuideEnabled;
         const btn = document.getElementById('btn-guide');
@@ -195,11 +331,16 @@
         document.getElementById('guide-text').innerText = text;
     }
 
+    /**
+     * 6. UI: GAME STATE RENDERER
+     * Parses the main JSON payload and updates all UI elements.
+     */
     function updateGameState(gameState) {
-        document.getElementById('hud-room').innerText = gameState.roomId;
+        // HUD
         document.getElementById('hud-mode').innerText = gameState.gameMode.replace('_', ' ');
         document.getElementById('hud-turn').innerText = gameState.currentPlayerId === myUsername ? "You" : gameState.currentPlayerId;
 
+        // Status Badges
         const statusEl = document.getElementById('hud-status');
         if (gameState.actionPending) {
             statusEl.innerText = `STATUS: Action Pending (Pos ${gameState.actionPendingOn})`;
@@ -209,11 +350,11 @@
             statusEl.className = "bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner";
         }
 
+        // Map Data to Players
         const p1 = gameState.players.find(p => p.username === myUsername);
         const p2 = gameState.players.find(p => p.username !== myUsername);
 
         if (p1) {
-            document.getElementById('p1-name').innerText = p1.username + " (You)";
             document.getElementById('p1-score').innerText = p1.points + " PTS";
             renderGrid('p1-grid', p1.positions);
         }
@@ -224,6 +365,10 @@
         }
     }
 
+    /**
+     * 7. UI: GRID RENDERER
+     * Draws 10 boxes natively using Tailwind CSS grids.
+     */
     function renderGrid(containerId, positionsArray) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
@@ -255,17 +400,17 @@
     }
 
     // ==========================================
-    // MOCK FUNCTIONS & DYNAMIC UI GENERATION
+    // MOCK DATA & SIMULATIONS FOR UI TESTING
     // ==========================================
 
     function injectDummyData() {
+        if(!myUsername) myUsername = "son"; // Safety bypass for testing without login
         const dummyPayload = {"type":"INFO","sender":"System","content":{"roomId":"room123","players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"FIGHTER"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"ryomen","actionPending":false,"actionPendingOn":null,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"}};
+
         updateGameState(dummyPayload.content);
         updateGuide("Game loaded. It is Player 2's turn to act.");
-
-        document.getElementById('dynamic-action-area').innerHTML = `
-                <span class="text-xs text-zinc-500 font-medium leading-relaxed">Waiting for opponent's move...</span>
-            `;
+        document.getElementById('dynamic-action-area').innerHTML = `<span class="text-xs text-zinc-500 font-medium leading-relaxed">Waiting for opponent's move...</span>`;
+        appendSystemLog("info", "Test State JSON Loaded.");
     }
 
     function simulateRollRequired() {
@@ -324,7 +469,6 @@
                 btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
 
                 updateGuide("You rolled a 4! Position 4 is selected. Analyzing state...");
-
                 setTimeout(simulateActionRequired, 1500);
             }
         }, 50);
@@ -347,13 +491,6 @@
                 </div>
             `;
     }
-
-    // Initialize empty board on load
-    window.onload = () => {
-        const emptyPositions = Array(11).fill(null);
-        renderGrid('p1-grid', emptyPositions);
-        renderGrid('p2-grid', emptyPositions);
-    };
 </script>
 </body>
 </html>
