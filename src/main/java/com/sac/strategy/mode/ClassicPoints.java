@@ -85,6 +85,7 @@ public class ClassicPoints implements Mode {
                 gameState.setActionPendingOn(null);
                 gameState.setCurrentPlayerId(null);
                 gameState.setActionPending(false);
+                gameState.setActionPendingOnActor(null);
                 messageService.broadcastMessage(
                         MessageFormat.endGameWithWinner(gameState), roomId);
                 webSocketSession.close(CloseStatus.NORMAL);
