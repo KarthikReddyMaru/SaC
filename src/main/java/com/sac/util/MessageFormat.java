@@ -82,7 +82,7 @@ public class MessageFormat {
     }
 
     public static String rollResult(PositionSelectionContext positionSelectionContext) {
-        return createJson(Type.POSITION_SELECTION, positionSelectionContext);
+        return createJson(Type.ROLL_RESULT, positionSelectionContext);
     }
 
     /**

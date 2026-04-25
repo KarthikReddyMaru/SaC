@@ -10,6 +10,6 @@ public record ServerResponse(Type type, String sender, Object content) {
         STATE,
         FINISH,
 
-        POSITION_SELECTION
+        ROLL_RESULT
     }
 }
