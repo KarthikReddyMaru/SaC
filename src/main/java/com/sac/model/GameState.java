@@ -36,10 +36,6 @@ public class GameState {
         ACTION_REQUIRED
     }
 
-    public void setActionPendingOnActor(Specialization specialization) {
-        this.actionPendingOnActor = specialization;
-    }
-
     @Data
     @AllArgsConstructor
     public static class Player {
