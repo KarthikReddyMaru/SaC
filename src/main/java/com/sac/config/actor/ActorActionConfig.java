@@ -8,8 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.sac.model.actor.Specialization.FIGHTER;
-import static com.sac.model.actor.Specialization.NOVICE;
+import static com.sac.model.actor.Specialization.*;
 import static com.sac.strategy.action.GameAction.*;
 
 public class ActorActionConfig {
@@ -18,9 +17,11 @@ public class ActorActionConfig {
 
     static {
         actions.put(NOVICE,
-                Set.of(EVOLVE, KAMIKAZE));
+                    Set.of(EVOLVE, KAMIKAZE));
         actions.put(FIGHTER,
-                Set.of(ATTACK_AND_CAPTURE));
+                    Set.of(ATTACK_AND_CAPTURE));
+        actions.put(PHANTOM,
+                    Set.of(BLACKOUT));
     }
 
     public static Set<GameAction> getAllowedActions(Specialization specialization) {

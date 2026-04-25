@@ -12,6 +12,7 @@ public final class ActorFactory {
     static {
         actors.put(Specialization.NOVICE, () -> Novice.builder().build());
         actors.put(Specialization.FIGHTER, () -> Fighter.builder().build());
+        actors.put(Specialization.PHANTOM, () -> Phantom.builder().build());
     }
 
     public static Actor getInstance(Specialization specialization) {
