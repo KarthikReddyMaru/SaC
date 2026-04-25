@@ -18,6 +18,7 @@ public class GameState {
     private String currentPlayerId;
     private boolean actionPending;
     private Integer actionPendingOn;
+    private boolean isWildCardActive;
     private Specialization actionPendingOnActor;
     private GameplayStatus gameplayStatus;
     private State state;
