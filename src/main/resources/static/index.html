@@ -95,8 +95,12 @@
                 MODE <span id="hud-mode" class="text-zinc-100 ml-1">???</span>
             </div>
 
-            <div class="flex gap-2 ml-2 md:ml-4">
+            <div class="flex flex-wrap gap-2 ml-2 md:ml-4">
                 <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Load Mock State</button>
+
+                <button onclick="sendActionPayload('EVOLVE')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Evolve</button>
+                <button onclick="sendActionPayload('ATTACK_AND_CAPTURE', 1)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Attack</button>
+                <button onclick="testSendPosition()" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Position</button>
                 <button id="btn-guide" onclick="toggleGuide()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2">Guide: ON</button>
             </div>
         </div>
@@ -123,7 +127,6 @@
         </aside>
 
         <main class="flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
-
             <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
                 <div class="flex items-stretch gap-4 md:gap-8 min-w-max py-4">
 
@@ -136,7 +139,6 @@
                     </div>
 
                     <div class="flex flex-col w-44 md:w-60 justify-center h-full my-auto">
-
                         <div class="flex items-center w-full mb-6">
                             <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent to-zinc-700"></div>
                             <span class="px-3 text-[10px] font-bold tracking-[0.25em] text-zinc-500 uppercase">Arena</span>
@@ -199,9 +201,15 @@
     let ws;
     let myUsername = "";
     let isGuideEnabled = true;
+
+    // The Single Source of Truth
     let globalGameState = null;
 
-    // Targeting Flags (Used to capture board clicks)
+    // Animation Sync Buffers
+    let isAnimatingRoll = false;
+    let pendingGameState = null;
+
+    // Transient Targeting Flags
     let isWildcardSelecting = false;
     let isKamikazeSelecting = false;
     let isAttackSelecting = false;
@@ -216,9 +224,6 @@
         fetchOnlinePlayers();
     };
 
-    /**
-     * 2. FETCH ONLINE PLAYERS
-     */
     function fetchOnlinePlayers() {
         fetch('/online/players')
             .then(response => response.text())
@@ -232,7 +237,7 @@
     }
 
     /**
-     * 3. CONNECT TO WEBSOCKET
+     * 2. CONNECT TO WEBSOCKET
      */
     function connectToServer() {
         const user = document.getElementById('input-username').value.trim();
@@ -245,8 +250,11 @@
 
         myUsername = user;
 
+        let wsHost = window.location.host;
+        if (!wsHost) wsHost = 'localhost:80';
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/room?roomId=${room}&username=${user}`;
+        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${room}&username=${user}`;
 
         ws = new WebSocket(wsUrl);
 
@@ -260,7 +268,7 @@
 
             appendSystemLog("info", "Uplink Established. Connected to Server.");
             updateGuide("Connection secure. Awaiting game state from server...");
-            resetActionArea();
+            resetActionArea("Synchronizing with Server...");
         };
 
         ws.onmessage = (event) => {
@@ -274,20 +282,31 @@
                 switch (msg.type) {
                     case "STATE":
                     case "FINISH":
-                        globalGameState = msg.content;
-                        updateGameState(msg.content);
-                        if(msg.type === "FINISH") showGameOverScreen(msg.content);
+                        if (isAnimatingRoll) {
+                            pendingGameState = msg.content;
+                        } else {
+                            globalGameState = msg.content;
+                            updateGameState(msg.content);
+                            if(msg.type === "FINISH") showGameOverScreen(msg.content);
+                        }
                         break;
                     case "INFO":
                         appendSystemLog("info", msg.content);
                         break;
                     case "ERROR":
                         appendSystemLog("error", msg.content);
-                        // Do NOT wipe targeting states or reload UI on Error.
-                        // Let the user retry the action on a different position!
+                        // BUG FIX: Unlock UI buffer from stuck loading states
+                        // and render the UI based on the read-only globalGameState.
+                        isAnimatingRoll = false;
+                        if (globalGameState) {
+                            updateGameState(globalGameState);
+                        }
                         break;
                     case "MESSAGE":
                         appendChatLog(msg.sender, msg.content);
+                        break;
+                    case "ROLL_RESULT":
+                        handleRollResultFromServer(msg.content);
                         break;
                 }
             } catch (e) {
@@ -306,57 +325,67 @@
     // ========================================================
 
     function updateGameState(gameState) {
-        // 1. Wipe all targeting flags to prevent accidental lingering clicks on fresh state
-        isWildcardSelecting = false;
-        isKamikazeSelecting = false;
-        isAttackSelecting = false;
+        try {
+            // 1. Wipe targeting flags, ensuring clean slate on fresh renders
+            isWildcardSelecting = false;
+            isKamikazeSelecting = false;
+            isAttackSelecting = false;
 
-        // 2. Update HUD
-        document.getElementById('hud-mode').innerText = gameState.gameMode ? gameState.gameMode.replace('_', ' ') : '???';
-        document.getElementById('hud-turn').innerText = gameState.currentPlayerId === myUsername ? "You" : gameState.currentPlayerId;
+            // 2. Update HUD
+            document.getElementById('hud-mode').innerText = gameState.gameMode ? gameState.gameMode.replace('_', ' ') : '???';
+            document.getElementById('hud-turn').innerText = gameState.currentPlayerId === myUsername ? "You" : gameState.currentPlayerId;
 
-        const statusEl = document.getElementById('hud-status');
-        if (gameState.state === 'ACTION_REQUIRED') {
-            statusEl.innerText = `STATUS: Action Pending (Pos ${gameState.actionPendingOn})`;
-            statusEl.className = "bg-zinc-950 border border-amber-500/50 px-3 py-1.5 rounded-md text-xs font-semibold text-amber-500 animate-pulse shadow-sm";
-        } else {
-            statusEl.innerText = `STATUS: ${gameState.state || gameState.positionSelection || 'WAITING'}`;
-            statusEl.className = "bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner";
-        }
-
-        // 3. Render Grids (Automatically wipes previous targeting highlights)
-        const p1 = gameState.players.find(p => p.username === myUsername);
-        const p2 = gameState.players.find(p => p.username !== myUsername);
-
-        if (p1) {
-            document.getElementById('p1-score').innerText = p1.points + " PTS";
-            renderGrid('p1-grid', p1.positions, 'p1');
-        }
-        if (p2) {
-            document.getElementById('p2-name').innerText = p2.username;
-            document.getElementById('p2-score').innerText = p2.points + " PTS";
-            renderGrid('p2-grid', p2.positions, 'p2');
-        }
-
-        if (gameState.gameplayStatus === 'FINISHED') return;
-
-        // 4. Action Area State Routing
-        if (gameState.currentPlayerId === myUsername) {
-            if (gameState.state === 'ROLL') {
-                renderRollUI();
-            } else if (gameState.state === 'ACTION_REQUIRED') {
-                renderActionUI(gameState.actionPendingOnActor);
+            const statusEl = document.getElementById('hud-status');
+            if (gameState.state === 'ACTION_REQUIRED') {
+                statusEl.innerText = `STATUS: Action Pending (Pos ${gameState.actionPendingOn})`;
+                statusEl.className = "bg-zinc-950 border border-amber-500/50 px-3 py-1.5 rounded-md text-xs font-semibold text-amber-500 animate-pulse shadow-sm";
             } else {
-                resetActionArea("Awaiting your next directive...");
-                updateGuide("Your turn. Assess the battlefield.");
+                statusEl.innerText = `STATUS: ${gameState.state || gameState.positionSelection || 'WAITING'}`;
+                statusEl.className = "bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner";
             }
-        } else {
-            resetActionArea("Waiting for opponent's move...");
-            updateGuide(`It is ${gameState.currentPlayerId}'s turn. Stand by.`);
+
+            // 3. Render Grids
+            const p1 = gameState.players.find(p => p.username === myUsername);
+            const p2 = gameState.players.find(p => p.username !== myUsername);
+
+            if (p1) {
+                document.getElementById('p1-score').innerText = p1.points + " PTS";
+                renderGrid('p1-grid', p1.positions, 'p1');
+            }
+            if (p2) {
+                document.getElementById('p2-name').innerText = p2.username;
+                document.getElementById('p2-score').innerText = p2.points + " PTS";
+                renderGrid('p2-grid', p2.positions, 'p2');
+            }
+
+            if (gameState.gameplayStatus === 'FINISHED') return;
+
+            // 4. Action Area State Routing
+            if (gameState.state === 'ROLL') {
+                renderRollUI(gameState.currentPlayerId === myUsername);
+            }
+            else if (gameState.state === 'ACTION_REQUIRED') {
+                if (gameState.currentPlayerId === myUsername) {
+                    renderActionUI(gameState.actionPendingOnActor);
+                } else {
+                    resetActionArea(`Waiting for ${gameState.currentPlayerId} to execute action...`);
+                    updateGuide(`${gameState.currentPlayerId} is strategizing.`);
+                }
+            }
+            else {
+                if (gameState.currentPlayerId === myUsername) {
+                    resetActionArea("Awaiting your next directive...");
+                    updateGuide("Your turn. Assess the battlefield.");
+                } else {
+                    resetActionArea("Waiting for opponent's move...");
+                    updateGuide(`It is ${gameState.currentPlayerId}'s turn. Stand by.`);
+                }
+            }
+        } catch (e) {
+            console.error("Error in updateGameState:", e);
         }
     }
 
-    // Draws the 10 boxes for a player. Injects handleBoxClick onto each.
     function renderGrid(containerId, positionsArray, playerKey) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
@@ -386,7 +415,6 @@
             }
 
             // *** ACTIVE ACTOR HIGHLIGHT ***
-            // Identify the unit currently executing the action (Cyan glow)
             let activeHighlight = "";
             if (globalGameState && globalGameState.state === 'ACTION_REQUIRED' && globalGameState.actionPendingOn === i) {
                 const isCurrentPlayerBoard = (playerKey === 'p1' && globalGameState.currentPlayerId === myUsername) ||
@@ -410,7 +438,7 @@
 
     function handleBoxClick(gridId, posId) {
 
-        // 1. Wildcard (Clicking P1 Uncaptured Box)
+        // 1. Wildcard
         if (isWildcardSelecting && gridId === 'p1') {
             const p1 = globalGameState.players.find(p => p.username === myUsername);
             const pos = p1.positions.find(p => p.positionId === posId);
@@ -422,11 +450,8 @@
             }
         }
 
-            // 2. Kamikaze Targeting
-        // Handles clicks on P1 (Source) or P2 (Destination)
+        // 2. Kamikaze Targeting
         else if (isKamikazeSelecting) {
-
-            // If they clicked P1 board (Their own board)
             if (gridId === 'p1') {
                 if (posId === globalGameState.actionPendingOn) {
                     appendSystemLog("error", "Cannot Kamikaze the unit initiating the action.");
@@ -434,13 +459,12 @@
                 }
                 sendActionPayload('KAMIKAZE', null, posId);
             }
-            // If they clicked P2 board (Opponent board)
             else if (gridId === 'p2') {
                 sendActionPayload('KAMIKAZE', posId, null);
             }
         }
 
-        // 3. Attack Targeting (Clicking P2 Uncaptured Box)
+        // 3. Attack Targeting
         else if (isAttackSelecting && gridId === 'p2') {
             const p2 = globalGameState.players.find(p => p.username !== myUsername);
             const pos = p2.positions.find(p => p.positionId === posId);
@@ -451,96 +475,72 @@
         }
     }
 
-    function triggerKamikazeSelection() {
-        isKamikazeSelecting = true;
-        isAttackSelecting = false;
-        updateGuide("KAMIKAZE active. Click an enemy position (Destination) OR your own position (Source) to strike. You cannot target the active unit.");
-
-        document.getElementById('dynamic-action-area').innerHTML = `
-            <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
-            <p class="text-[10px] text-zinc-400">Click a pulsing red box to strike.</p>
-            <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
-        `;
-
-        // Pulse P1 boxes (Except the source actor which stays Cyan)
-        for(let i=1; i<=10; i++) {
-            const box = document.getElementById(`p1-box-${i}`);
-            if (box) {
-                if (i !== globalGameState.actionPendingOn) {
-                    box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
-                    box.classList.replace('border-zinc-800', 'border-red-500');
-                } else {
-                    // Make the active unit visually excluded from the targeting pool
-                    box.classList.add('cursor-not-allowed');
-                }
-            }
-        }
-
-        // Pulse ALL P2 boxes
-        for(let i=1; i<=10; i++) {
-            const box = document.getElementById(`p2-box-${i}`);
-            if(box) {
-                box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
-                box.classList.replace('border-zinc-800', 'border-red-500');
-            }
-        }
-    }
-
-    function triggerAttackSelection() {
-        isAttackSelecting = true;
-        isKamikazeSelecting = false;
-        updateGuide("ATTACK active. Click an UNCAPTURED enemy position to capture it.");
-
-        document.getElementById('dynamic-action-area').innerHTML = `
-            <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
-            <p class="text-[10px] text-zinc-400">Click a pulsing red box on the enemy board.</p>
-            <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
-        `;
-
-        // Pulse ONLY UNCAPTURED P2 boxes
-        const p2 = globalGameState.players.find(p => p.username !== myUsername);
-        if (p2) {
-            for(let i=1; i<=10; i++) {
-                const pos = p2.positions.find(p => p.positionId === i);
-                if(pos && !pos.capturedByOpponent) {
-                    const box = document.getElementById(`p2-box-${i}`);
-                    if(box) {
-                        box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
-                        box.classList.replace('border-zinc-800', 'border-red-500');
-                    }
-                }
-            }
-        }
-    }
-
     // ========================================================
-    // ROLL ENGINE & WILDCARD
+    // SERVER-AUTHORITATIVE ROLL ENGINE
     // ========================================================
-    function renderRollUI() {
-        updateGuide("Roll the dice! The sum determines your target position. If you roll two empty faces, you unlock a WILDCARD.");
 
+    function renderRollUI(isMyTurn) {
         const actionArea = document.getElementById('dynamic-action-area');
+
+        let buttonHtml = isMyTurn
+            ? `<button id="btn-roll" onclick="requestRollFromServer()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-widest">Roll Dice</button>`
+            : `<div class="bg-zinc-800 border border-zinc-700 text-zinc-500 font-semibold text-xs px-6 py-2.5 rounded-lg w-full text-center uppercase tracking-widest">Awaiting Opponent</div>`;
+
+        if (isMyTurn) {
+            updateGuide("Roll the dice! The server will generate the outcome. Double-blanks unlock a WILDCARD.");
+        } else {
+            updateGuide(`It is ${globalGameState.currentPlayerId}'s turn to roll. Stand by.`);
+        }
+
         actionArea.innerHTML = `
-            <h3 class="text-blue-400 font-semibold mb-1 text-sm uppercase tracking-wide">Your Turn</h3>
-            <p class="text-[10px] text-zinc-500 mb-4 uppercase tracking-wider">Roll to target position</p>
+            <h3 class="text-blue-400 font-semibold mb-1 text-sm uppercase tracking-wide">${isMyTurn ? "Your Turn" : "Enemy Turn"}</h3>
+            <p class="text-[10px] text-zinc-500 mb-4 uppercase tracking-wider">Roll Phase</p>
 
             <div class="flex gap-4 mb-4">
                 <div id="die-1" class="w-12 h-12 bg-zinc-900 border border-zinc-700 rounded-xl flex justify-center items-center shadow-inner relative"><span class="font-mono text-xl font-bold text-zinc-200">?</span></div>
                 <div id="die-2" class="w-12 h-12 bg-zinc-900 border border-zinc-700 rounded-xl flex justify-center items-center shadow-inner relative"><span class="font-mono text-xl font-bold text-zinc-200">?</span></div>
             </div>
 
-            <button onclick="executeRollAnimation(this, false)" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-widest">Roll Dice</button>
+            ${buttonHtml}
         `;
     }
 
-    function executeRollAnimation(btn, forceWildcard = false) {
-        btn.disabled = true;
-        btn.innerText = "ROLLING...";
+    function requestRollFromServer() {
+        const btn = document.getElementById('btn-roll');
+        if(btn) {
+            btn.disabled = true;
+            btn.innerText = "REQUESTING...";
+        }
+        ws.send(JSON.stringify({ type: "POSITION", payload: {} }));
+    }
+
+    function handleRollResultFromServer(rollData) {
+        const btn = document.getElementById('btn-roll');
+        if(btn) btn.innerText = "ROLLING...";
+
+        let v1 = rollData.diceResults[0] === 0 ? '' : String(rollData.diceResults[0]);
+        let v2 = rollData.diceResults[1] === 0 ? '' : String(rollData.diceResults[1]);
+
+        if (rollData.isWildcard) {
+            v1 = ''; v2 = '';
+        }
+
+        executeRollAnimation(v1, v2, rollData.isWildcard);
+    }
+
+    function executeRollAnimation(finalVal1, finalVal2, isWildcard) {
+        isAnimatingRoll = true;
 
         const d1 = document.getElementById('die-1');
         const d2 = document.getElementById('die-2');
+        if(!d1 || !d2) {
+            isAnimatingRoll = false;
+            return;
+        }
+
         const d1Text = d1.querySelector('span');
         const d2Text = d2.querySelector('span');
+        const btn = document.getElementById('btn-roll');
 
         d1.classList.add('rolling');
         d2.classList.add('rolling');
@@ -553,40 +553,58 @@
             d2Text.innerText = faces[Math.floor(Math.random() * faces.length)];
             rolls++;
 
-            if(rolls > 15) {
+            if(rolls > 25) {
                 clearInterval(interval);
                 d1.classList.remove('rolling');
                 d2.classList.remove('rolling');
 
-                let res1 = forceWildcard ? '' : faces[Math.floor(Math.random() * faces.length)];
-                let res2 = forceWildcard ? '' : faces[Math.floor(Math.random() * faces.length)];
+                d1Text.innerText = finalVal1;
+                d2Text.innerText = finalVal2;
 
-                d1Text.innerText = res1;
-                d2Text.innerText = res2;
+                const isMyRoll = (globalGameState && globalGameState.currentPlayerId === myUsername);
 
-                if (res1 === '' && res2 === '') {
-                    btn.innerText = "WILDCARD!";
-                    btn.classList.replace('bg-blue-600', 'bg-amber-600');
-                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-amber-500');
-                    triggerWildcardSelection();
-                }
-                else {
-                    let val1 = res1 === '' ? 0 : parseInt(res1);
-                    let val2 = res2 === '' ? 0 : parseInt(res2);
+                if (isWildcard) {
+                    if(btn) {
+                        btn.innerText = "WILDCARD!";
+                        btn.classList.replace('bg-blue-600', 'bg-amber-600');
+                        btn.classList.replace('hover:bg-blue-500', 'hover:bg-amber-500');
+                    }
+                    // BUG FIX: Removed triggerWildcardSelection() from here.
+                    // Safely handled below under the isMyRoll guard.
+                } else {
+                    let val1 = finalVal1 === '' ? 0 : parseInt(finalVal1);
+                    let val2 = finalVal2 === '' ? 0 : parseInt(finalVal2);
                     let sum = val1 + val2;
 
-                    btn.innerText = "ROLLED: " + sum;
-                    btn.classList.replace('bg-blue-600', 'bg-emerald-600');
-                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
-
-                    updateGuide(`You rolled a ${sum}! Position ${sum} targeted. Analyzing state...`);
-
-                    isWildcardSelecting = false;
-                    setTimeout(() => {
-                        ws.send(JSON.stringify({ type: "POSITION", payload: { position: sum } }));
-                        resetActionArea("Position transmitted. Awaiting server synchronization...");
-                    }, 1000);
+                    if(btn) {
+                        btn.innerText = "ROLLED: " + sum;
+                        btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+                        btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
+                    }
                 }
+
+                setTimeout(() => {
+                    isAnimatingRoll = false;
+
+                    if (pendingGameState) {
+                        globalGameState = pendingGameState;
+                        updateGameState(pendingGameState);
+                        pendingGameState = null;
+
+                        if (globalGameState.type === "FINISH") {
+                            showGameOverScreen(globalGameState);
+                        }
+                    } else {
+                        if (isMyRoll) {
+                            if (isWildcard) triggerWildcardSelection();
+                            else resetActionArea("Analyzing target position...");
+                        } else {
+                            if (isWildcard) resetActionArea("Opponent triggered a WILDCARD. Waiting for selection...");
+                            else resetActionArea("Opponent finished rolling. Awaiting their move...");
+                        }
+                    }
+
+                }, 1000);
             }
         }, 50);
     }
@@ -649,7 +667,64 @@
         actionArea.innerHTML = html;
     }
 
-    // Send ACTION PAYLOAD to server
+    function triggerKamikazeSelection() {
+        isKamikazeSelecting = true;
+        isAttackSelecting = false;
+        updateGuide("KAMIKAZE active. Click an enemy position (Destination) OR your own position (Source) to strike. You cannot target the active unit.");
+
+        document.getElementById('dynamic-action-area').innerHTML = `
+            <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
+            <p class="text-[10px] text-zinc-400">Click a pulsing red box to strike.</p>
+            <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
+        `;
+
+        for(let i=1; i<=10; i++) {
+            const box = document.getElementById(`p1-box-${i}`);
+            if (box) {
+                if (i !== globalGameState.actionPendingOn) {
+                    box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
+                    box.classList.replace('border-zinc-800', 'border-red-500');
+                } else {
+                    box.classList.add('cursor-not-allowed');
+                }
+            }
+        }
+
+        for(let i=1; i<=10; i++) {
+            const box = document.getElementById(`p2-box-${i}`);
+            if(box) {
+                box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
+                box.classList.replace('border-zinc-800', 'border-red-500');
+            }
+        }
+    }
+
+    function triggerAttackSelection() {
+        isAttackSelecting = true;
+        isKamikazeSelecting = false;
+        updateGuide("ATTACK active. Click an UNCAPTURED enemy position to capture it.");
+
+        document.getElementById('dynamic-action-area').innerHTML = `
+            <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
+            <p class="text-[10px] text-zinc-400">Click a pulsing red box on the enemy board.</p>
+            <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
+        `;
+
+        const p2 = globalGameState.players.find(p => p.username !== myUsername);
+        if (p2) {
+            for(let i=1; i<=10; i++) {
+                const pos = p2.positions.find(p => p.positionId === i);
+                if(pos && !pos.capturedByOpponent) {
+                    const box = document.getElementById(`p2-box-${i}`);
+                    if(box) {
+                        box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
+                        box.classList.replace('border-zinc-800', 'border-red-500');
+                    }
+                }
+            }
+        }
+    }
+
     function sendActionPayload(actionType, targetPosId = null, sourcePosId = null) {
         let payload = { gameAction: actionType };
 
@@ -659,7 +734,6 @@
         }
 
         if (actionType === "KAMIKAZE") {
-            // Can be destination or source, depending on what user clicked
             if (targetPosId) payload.destinationPosition = targetPosId;
             if (sourcePosId) payload.sourcePosition = sourcePosId;
         }
@@ -668,7 +742,7 @@
             payload.specialization = "FIGHTER";
         }
 
-        // Wipe flags immediately to prevent double-clicks
+        // Wipe flags to prevent accidental double clicks before server resolves
         isKamikazeSelecting = false;
         isAttackSelecting = false;
 
@@ -763,61 +837,30 @@
     }
 
     // ==========================================
-    // TESTING MOCKS (Safe to remove in prod)
+    // TESTING MOCKS & NEW DEBUG ACTIONS
     // ==========================================
     function injectDummyData() {
         if(!myUsername) myUsername = "son";
 
-        const dummyPayload = {
-            "roomId":"room123",
-            "state": "ACTION_REQUIRED",
-            "actionPendingOnActor": "NOVICE",
-            "actionPendingOn": 3,
-            "players":[
-                {
-                    "positions":[
-                        {"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},
-                        {"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},
-                        {"positionId":10,"belongsTo":"son","actor":{"currentState":"FIGHTER"},"capturedByOpponent":false}
-                    ],
-                    "username":"son","points":3
-                },
-                {
-                    "positions":[
-                        {"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},
-                        {"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},
-                        {"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}
-                    ],
-                    "username":"ryomen","points":5
-                }
-            ],
-            "playerCount":2,
-            "currentPlayerId":"son",
-            "actionPending":true,
-            "status":"PLAYING",
-            "gameMode":"CLASSIC_POINTS",
-            "positionSelection":"ROLL"
-        };
+        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"NOVICE","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"FIGHTER"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
 
         globalGameState = dummyPayload;
         updateGameState(dummyPayload);
         appendSystemLog("info", "Test State JSON Loaded.");
+    }
+
+    // NEW FUNCTION: Added to handle sending an arbitrary position payload via WebSocket
+    function testSendPosition() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            appendSystemLog("error", "Cannot send position payload: WebSocket offline.");
+            alert("Please establish uplink first!");
+            return;
+        }
+
+        // Arbitrary test position: 1. You can adjust this as needed for testing.
+        const testPos = 1;
+        ws.send(JSON.stringify({ type: "POSITION", payload: { position: testPos } }));
+        appendSystemLog("info", `Debug: Raw Position payload sent (Pos: ${testPos}).`);
     }
 </script>
 </body>
