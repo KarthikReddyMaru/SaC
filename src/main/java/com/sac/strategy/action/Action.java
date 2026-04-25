@@ -7,10 +7,10 @@ import org.springframework.web.socket.WebSocketSession;
 
 public interface Action {
 
-    GameAction getActionType();
-    void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId);
-    int pointsForSuccessfulAction();
-
     boolean preAction(PreActionVisitor preActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext);
+    void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId);
     void postAction(PostActionVisitor postActionVisitor, WebSocketSession webSocketSession, ActionContext actionContext);
+    int pointsForSuccessfulAction();
+    GameAction getActionType();
+
 }

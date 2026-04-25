@@ -5,8 +5,6 @@ import com.sac.model.GameState.Player;
 import com.sac.model.Position;
 import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
-import com.sac.service.MessageService;
-import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import com.sac.visitor.postaction.PostActionVisitor;
 import com.sac.visitor.preaction.PreActionVisitor;
@@ -21,7 +19,6 @@ import static com.sac.strategy.action.GameAction.KAMIKAZE;
 public class Kamikaze implements Action {
 
     private final GameStateService gameStateService;
-    private final MessageService messageService;
 
     @Override
     public GameAction getActionType() {

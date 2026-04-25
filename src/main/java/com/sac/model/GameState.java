@@ -35,8 +35,7 @@ public class GameState {
     }
 
     public enum State {
-        ROLL,
-        ACTION_REQUIRED
+        ROLL, ACTION_REQUIRED
     }
 
     @Data
@@ -51,32 +50,39 @@ public class GameState {
         }
     }
 
+    public Player getPlayer(String username) {
+        return this.players.stream()
+                           .filter(player -> player.getUsername().equals(username))
+                           .findFirst()
+                           .orElseThrow();
+    }
+
     public Position getPlayerPosition(String username, int position) {
-        return this
-                .getPlayers()
-                .stream()
-                .filter(player -> player.getUsername().equals(username))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new)
-                .getPositions()[position];
+        return this.getPlayers()
+                   .stream()
+                   .filter(player -> player.getUsername()
+                                           .equals(username))
+                   .findFirst()
+                   .orElseThrow(IllegalStateException::new)
+                   .getPositions()[position];
     }
 
     public Position getOpponentPosition(String username, int position) {
-        return this
-                .getPlayers()
-                .stream()
-                .filter(player -> !player.getUsername().equals(username))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new)
-                .getPositions()[position];
+        return this.getPlayers()
+                   .stream()
+                   .filter(player -> !player.getUsername()
+                                            .equals(username))
+                   .findFirst()
+                   .orElseThrow(IllegalStateException::new)
+                   .getPositions()[position];
     }
 
     public Player getOpponent(String username) {
-        return this
-                .getPlayers()
-                .stream()
-                .filter(player -> !player.getUsername().equals(username))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new);
+        return this.getPlayers()
+                   .stream()
+                   .filter(player -> !player.getUsername()
+                                            .equals(username))
+                   .findFirst()
+                   .orElseThrow(IllegalStateException::new);
     }
 }
