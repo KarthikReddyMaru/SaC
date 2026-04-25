@@ -44,6 +44,8 @@
 
 <body class="bg-zinc-950 text-zinc-100 font-sans h-screen overflow-hidden selection:bg-blue-500/30 relative">
 
+<div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
 <div id="login-screen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950">
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col gap-6">
 
@@ -116,15 +118,6 @@
     </header>
 
     <div class="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
-
-        <aside class="w-full lg:w-72 xl:w-80 flex-shrink-0 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col shadow-lg overflow-hidden h-[250px] lg:h-full">
-            <div class="px-4 py-3 bg-zinc-900 border-b border-zinc-800 text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase flex justify-between items-center">
-                System Ticker
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-            </div>
-            <div id="system-logs" class="flex-1 p-3 overflow-y-auto flex flex-col gap-2">
-            </div>
-        </aside>
 
         <main class="flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
             <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
@@ -266,7 +259,7 @@
             document.getElementById('hud-room').innerText = room;
             document.getElementById('p1-name').innerText = user + " (You)";
 
-            appendSystemLog("info", "Uplink Established. Connected to Server.");
+            showToast("success", "Uplink Established. Connected to Server.");
             updateGuide("Connection secure. Awaiting game state from server...");
             resetActionArea("Synchronizing with Server...");
         };
@@ -287,17 +280,16 @@
                         } else {
                             globalGameState = msg.content;
                             updateGameState(msg.content);
-                            // Fixed: Check actual payload state, not the transient message type
                             if (globalGameState.gameplayStatus === 'FINISHED') {
                                 showGameOverScreen(globalGameState);
                             }
                         }
                         break;
                     case "INFO":
-                        appendSystemLog("info", msg.content);
+                        showToast("info", msg.content);
                         break;
                     case "ERROR":
-                        appendSystemLog("error", msg.content);
+                        showToast("error", msg.content);
                         break;
                     case "MESSAGE":
                         appendChatLog(msg.sender, msg.content);
@@ -312,7 +304,7 @@
         };
 
         ws.onclose = () => {
-            appendSystemLog("error", "Connection to Server Lost.");
+            showToast("error", "Connection to Server Lost.");
             updateGuide("Connection severed. Please refresh to reconnect.");
         };
     }
@@ -454,7 +446,7 @@
         else if (isKamikazeSelecting) {
             if (gridId === 'p1') {
                 if (posId === globalGameState.actionPendingOn) {
-                    appendSystemLog("error", "Cannot Kamikaze the unit initiating the action.");
+                    showToast("error", "Cannot Kamikaze the active unit.");
                     return;
                 }
                 sendActionPayload('KAMIKAZE', null, posId);
@@ -786,29 +778,52 @@
         `;
     }
 
-    function appendSystemLog(type, text) {
-        const container = document.getElementById('system-logs');
-        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    function showToast(type, text) {
+        const container = document.getElementById('toast-container');
 
-        let colorClass = "bg-zinc-950/50 border-zinc-800/50 text-zinc-300";
-        if (type === "error") colorClass = "bg-red-500/10 border-red-500/20 text-red-400";
-        if (type === "success") colorClass = "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
+        // Enforce max 3 toasts rule
+        if (container.children.length >= 3) {
+            container.removeChild(container.firstChild);
+        }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = `p-2.5 border rounded-lg text-xs flex gap-2 ${colorClass}`;
+        let colorClass = "bg-zinc-800 border-zinc-700 text-zinc-200";
+        let iconHtml = '';
 
-        const timeSpan = document.createElement('span');
-        timeSpan.className = "font-mono mt-0.5 opacity-75";
-        timeSpan.textContent = `[${time}]`;
+        if (type === "error") {
+            colorClass = "bg-red-950/95 border-red-800 text-red-300";
+            iconHtml = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        } else if (type === "success") {
+            colorClass = "bg-emerald-950/95 border-emerald-800 text-emerald-300";
+            iconHtml = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+        } else {
+            colorClass = "bg-zinc-800/95 border-zinc-700 text-zinc-200";
+            iconHtml = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        }
 
-        const textSpan = document.createElement('span');
-        textSpan.textContent = text;
+        const toast = document.createElement('div');
+        toast.className = `px-4 py-2.5 rounded-lg border shadow-[0_0_20px_rgba(0,0,0,0.5)] text-xs font-medium flex items-center gap-2.5 transition-all duration-300 transform -translate-y-4 opacity-0 ${colorClass}`;
 
-        wrapper.appendChild(timeSpan);
-        wrapper.appendChild(textSpan);
-        container.appendChild(wrapper);
+        toast.innerHTML = iconHtml;
+        const textNode = document.createElement('span');
+        textNode.textContent = text;
+        toast.appendChild(textNode);
 
-        container.scrollTop = container.scrollHeight;
+        container.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.remove('-translate-y-4', 'opacity-0');
+        });
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.add('opacity-0', '-translate-y-2');
+            setTimeout(() => {
+                if (container.contains(toast)) {
+                    container.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
     }
 
     function appendChatLog(sender, text) {
@@ -875,13 +890,13 @@
 
         globalGameState = dummyPayload;
         updateGameState(dummyPayload);
-        appendSystemLog("info", "Test State JSON Loaded.");
+        showToast("info", "Test State JSON Loaded.");
     }
 
     // NEW FUNCTION: Added to handle sending an arbitrary position payload via WebSocket
     function testSendPosition() {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            appendSystemLog("error", "Cannot send position payload: WebSocket offline.");
+            showToast("error", "Cannot send position payload: WebSocket offline.");
             alert("Please establish uplink first!");
             return;
         }
@@ -889,7 +904,7 @@
         // Arbitrary test position: 1. You can adjust this as needed for testing.
         const testPos = 1;
         ws.send(JSON.stringify({ type: "POSITION", payload: { position: testPos } }));
-        appendSystemLog("info", `Debug: Raw Position payload sent (Pos: ${testPos}).`);
+        showToast("info", `Debug: Raw Position payload sent (Pos: ${testPos}).`);
     }
 </script>
 </body>
