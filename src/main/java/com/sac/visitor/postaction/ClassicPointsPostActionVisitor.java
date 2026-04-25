@@ -1,7 +1,6 @@
 package com.sac.visitor.postaction;
 
 import com.sac.model.GameState;
-import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
@@ -34,8 +33,6 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String opponent = gameState.getOpponent(username).getUsername();
 
-        messageService.broadcastMessage(MessageFormat.spawnSuccessAction(username, gameState.getActionPendingOn()),
-                                        roomId);
         pointsService.addPoints(roomId, username, spawn.pointsForSuccessfulAction());
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
@@ -59,7 +56,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setCurrentPlayerId(opponent);
         gameState.setActionPendingOnActor(null);
         gameState.setState(ROLL);
-        messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
+
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -69,15 +66,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
 
-        Specialization requestedTransition = actionContext.getSpecialization();
-
         GameState gameState = gameStateService.getGameState(roomId);
-        int actionPerformingOn = gameState.getActionPendingOn();
         String opponent = gameState.getOpponent(username).getUsername();
-
-        messageService.broadcastMessage(
-                MessageFormat.evolveSuccessAction(username, actionPerformingOn, Specialization.NOVICE, requestedTransition),
-                roomId);
 
         pointsService.addPoints(roomId, username, evolve.pointsForSuccessfulAction());
         gameState.setActionPending(false);
@@ -85,7 +75,6 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setCurrentPlayerId(opponent);
         gameState.setState(ROLL);
         gameState.setActionPendingOnActor(null);
-        messageService.broadcastMessage(MessageFormat.rollMessage(opponent), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -96,12 +85,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
-        String opponent = gameState.getOpponent(username).getUsername();
-        Integer opponentPositionId = actionContext.getDestinationPosition();
 
-        messageService.sendRawPayload(webSocketSession,
-                                         MessageFormat.captureSuccessAction(username, opponent,
-                                                                       opponentPositionId));
 
         pointsService.addPoints(roomId, username, attackAndCapture.pointsForSuccessfulAction());
         gameState.setCurrentPlayerId(username);
@@ -109,7 +93,6 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         gameState.setActionPending(false);
         gameState.setState(ROLL);
         gameState.setActionPendingOnActor(null);
-        messageService.broadcastMessage(MessageFormat.rollMessage(username), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 }
