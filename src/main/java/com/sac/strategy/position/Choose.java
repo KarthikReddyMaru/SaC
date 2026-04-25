@@ -53,7 +53,6 @@ public class Choose implements PositionSelectionHandlerStrategy {
             } else {
                 respondedPlayers.put(respondedPlayerId, positionContext.getPosition());
                 messageService.sendSystemMessage(webSocketSession, "Your response is recorded as " + positionContext.getPosition());
-                messageService.sendMessage(webSocketSession, MessageFormat.chosenResponseMessage(respondedPlayerId), roomId);
                 int totalPlayersInTheRoom = gameState.getPlayerCount();
                 if (totalPlayersInTheRoom == respondedPlayers.size())
                     chosenResponseService.processChosenResponses(roomId, gameState, respondedPlayers);

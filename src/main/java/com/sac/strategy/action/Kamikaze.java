@@ -49,13 +49,8 @@ public class Kamikaze implements Action {
         actionPerformingPosition.setActor(null);
         if (sourcePositionToPerformAction != null) {
             gameState.getPlayerPosition(username, sourcePositionToPerformAction).restorePosition();
-            messageService.broadcastMessage(
-                    MessageFormat.kamikazeSuccessAction(username, sourcePositionToPerformAction), roomId);
         } else {
             opponent.getPositions()[destinationPositionToPerformAction].restorePosition();
-            messageService.broadcastMessage(
-                    MessageFormat.kamikazeSuccessAction(opponent.getUsername(), destinationPositionToPerformAction),
-                    roomId);
         }
     }
 

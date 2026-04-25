@@ -62,10 +62,7 @@ public class GameplayService {
 
     private void postGameInitialization(String roomId, GameState gameState) {
         if (gameState.getPositionSelection().equals(PositionSelection.ROLL)) {
-            String currentPlayerId = gameStateService.getGameState(roomId)
-                                                     .getCurrentPlayerId();
             gameState.setState(GameState.State.ROLL);
-            messageService.broadcastMessage(MessageFormat.rollMessage(currentPlayerId), roomId);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         }
     }
