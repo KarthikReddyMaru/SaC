@@ -192,8 +192,18 @@
 <script>
     // Global State Variables
     let ws;
-    let myUsername = "";
     let isGuideEnabled = true;
+
+    // SECURE IDENTITY MANAGER (Replaces global myUsername)
+    const IdentityManager = (() => {
+        let _username = "";
+        return {
+            set: (name) => {
+                if (!_username) _username = name; // Write-once lock
+            },
+            get: () => _username
+        };
+    })();
 
     // The Single Source of Truth
     let globalGameState = null;
@@ -241,13 +251,14 @@
             return;
         }
 
-        myUsername = user;
+        // Lock in identity
+        IdentityManager.set(user);
 
         let wsHost = window.location.host;
         if (!wsHost) wsHost = 'localhost:80';
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${room}&username=${user}`;
+        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${room}&username=${IdentityManager.get()}`;
 
         ws = new WebSocket(wsUrl);
 
@@ -257,7 +268,7 @@
             document.getElementById('game-ui').classList.add('flex');
 
             document.getElementById('hud-room').innerText = room;
-            document.getElementById('p1-name').innerText = user + " (You)";
+            document.getElementById('p1-name').innerText = IdentityManager.get() + " (You)";
 
             showToast("success", "Uplink Established. Connected to Server.");
             updateGuide("Connection secure. Awaiting game state from server...");
@@ -322,7 +333,7 @@
 
             // 2. Update HUD
             document.getElementById('hud-mode').innerText = gameState.gameMode ? gameState.gameMode.replace('_', ' ') : '???';
-            document.getElementById('hud-turn').innerText = gameState.currentPlayerId === myUsername ? "You" : gameState.currentPlayerId;
+            document.getElementById('hud-turn').innerText = gameState.currentPlayerId === IdentityManager.get() ? "You" : gameState.currentPlayerId;
 
             const statusEl = document.getElementById('hud-status');
             if (gameState.state === 'ACTION_REQUIRED') {
@@ -334,8 +345,8 @@
             }
 
             // 3. Render Grids
-            const p1 = gameState.players.find(p => p.username === myUsername);
-            const p2 = gameState.players.find(p => p.username !== myUsername);
+            const p1 = gameState.players.find(p => p.username === IdentityManager.get());
+            const p2 = gameState.players.find(p => p.username !== IdentityManager.get());
 
             if (p1) {
                 document.getElementById('p1-score').innerText = p1.points + " PTS";
@@ -351,10 +362,10 @@
 
             // 4. Action Area State Routing
             if (gameState.state === 'ROLL') {
-                renderRollUI(gameState.currentPlayerId === myUsername);
+                renderRollUI(gameState.currentPlayerId === IdentityManager.get());
             }
             else if (gameState.state === 'ACTION_REQUIRED') {
-                if (gameState.currentPlayerId === myUsername) {
+                if (gameState.currentPlayerId === IdentityManager.get()) {
                     renderActionUI(gameState.actionPendingOnActor);
                 } else {
                     resetActionArea(`Waiting for ${gameState.currentPlayerId} to execute action...`);
@@ -362,7 +373,7 @@
                 }
             }
             else {
-                if (gameState.currentPlayerId === myUsername) {
+                if (gameState.currentPlayerId === IdentityManager.get()) {
                     resetActionArea("Awaiting your next directive...");
                     updateGuide("Your turn. Assess the battlefield.");
                 } else {
@@ -406,8 +417,8 @@
             // *** ACTIVE ACTOR HIGHLIGHT ***
             let activeHighlight = "";
             if (globalGameState && globalGameState.state === 'ACTION_REQUIRED' && globalGameState.actionPendingOn === i) {
-                const isCurrentPlayerBoard = (playerKey === 'p1' && globalGameState.currentPlayerId === myUsername) ||
-                    (playerKey === 'p2' && globalGameState.currentPlayerId !== myUsername);
+                const isCurrentPlayerBoard = (playerKey === 'p1' && globalGameState.currentPlayerId === IdentityManager.get()) ||
+                    (playerKey === 'p2' && globalGameState.currentPlayerId !== IdentityManager.get());
 
                 if (isCurrentPlayerBoard) {
                     activeHighlight = " ring-4 ring-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] z-10 scale-[1.05] border-cyan-400 bg-cyan-500/10 ";
@@ -429,7 +440,7 @@
 
         // 1. Wildcard
         if (isWildcardSelecting && gridId === 'p1') {
-            const p1 = globalGameState.players.find(p => p.username === myUsername);
+            const p1 = globalGameState.players.find(p => p.username === IdentityManager.get());
             const pos = p1.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
@@ -458,7 +469,7 @@
 
         // 3. Attack Targeting
         else if (isAttackSelecting && gridId === 'p2') {
-            const p2 = globalGameState.players.find(p => p.username !== myUsername);
+            const p2 = globalGameState.players.find(p => p.username !== IdentityManager.get());
             const pos = p2.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
@@ -586,7 +597,7 @@
                         }
                     }
 
-                    const isMyTurnNow = (globalGameState && globalGameState.currentPlayerId === myUsername);
+                    const isMyTurnNow = (globalGameState && globalGameState.currentPlayerId === IdentityManager.get());
 
                     if (isWildcard) {
                         if (isMyTurnNow) triggerWildcardSelection();
@@ -615,7 +626,7 @@
             <p class="text-[10px] text-zinc-400">Click a glowing box on your board.</p>
         `;
 
-        const p1 = globalGameState.players.find(p => p.username === myUsername);
+        const p1 = globalGameState.players.find(p => p.username === IdentityManager.get());
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
             if (p1Box) {
@@ -706,7 +717,7 @@
             <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
         `;
 
-        const p2 = globalGameState.players.find(p => p.username !== myUsername);
+        const p2 = globalGameState.players.find(p => p.username !== IdentityManager.get());
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
             if (p1Box) {
@@ -828,7 +839,7 @@
 
     function appendChatLog(sender, text) {
         const container = document.getElementById('chat-messages');
-        const isMe = (sender === myUsername || sender === "You");
+        const isMe = (sender === IdentityManager.get() || sender === "You");
         const senderName = isMe ? "You" : sender;
 
         const alignClass = isMe ? "self-end items-end" : "self-start items-start";
@@ -884,7 +895,7 @@
     // TESTING MOCKS & NEW DEBUG ACTIONS
     // ==========================================
     function injectDummyData() {
-        if(!myUsername) myUsername = "son";
+        if(!IdentityManager.get()) IdentityManager.set("son");
 
         const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"NOVICE","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"FIGHTER"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
 
