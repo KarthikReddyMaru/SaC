@@ -7,8 +7,7 @@ public enum GameAction {
     EVOLVE,
     KAMIKAZE,
     ATTACK_AND_CAPTURE,
-    TELEPORT,
-    RESTORE;
+    BLACKOUT;
 
     public static GameAction fromString(String gameAction) {
         return Arrays.stream(GameAction.values())
