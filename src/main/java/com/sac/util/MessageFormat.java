@@ -46,68 +46,16 @@ public class MessageFormat {
         }
     }
 
-    /**
-     * System Messages
-     */
-
-    public static String systemInfo(String message) {
-        return createJson(Type.INFO, message);
-    }
-
     public static String systemError(String message) {
         return createJson(Type.ERROR, message);
-    }
-
-    /**
-     * Choose Messages
-     */
-//
-//    public static String chooseMessage(String username) {
-//        String message = String.format("Your turn to choose a position, %s!", username);
-//        return createJson(Type.SELECT_POSITION, message);
-//    }
-
-    public static String chosenResponseMessage(String username) {
-        String message = String.format("%s has selected a position.", username);
-        return createJson(Type.INFO, message);
     }
 
     /**
      * Roll Messages
      */
 
-    public static String rollMessage(String username) {
-        String message = String.format("%s will roll the dice now", username);
-        return createJson(Type.INFO, message);
-    }
-
     public static String rollResult(PositionSelectionContext positionSelectionContext) {
         return createJson(Type.ROLL_RESULT, positionSelectionContext);
-    }
-
-    /**
-     * Success Actions
-     */
-
-    public static String spawnSuccessAction(String username, int actionPerformedOn) {
-        String message = String.format("%s spawned Novice @ %d", username, actionPerformedOn);
-        return createJson(Type.INFO, message);
-    }
-
-    public static String evolveSuccessAction(String username, int actionPerformedOn,
-                                             Specialization from, Specialization to) {
-        String message = String.format("%s: Evolved %s ➔ %s (Pos %d)", username, from, to, actionPerformedOn);
-        return createJson(Type.INFO, message);
-    }
-
-    public static String kamikazeSuccessAction(String username, int position) {
-        String message = String.format("Position %d of %s restored to last state", position, username);
-        return createJson(Type.INFO, message);
-    }
-
-    public static String captureSuccessAction(String username, String opponent, int positionId) {
-        String message = String.format("%s captured pos %d from %s", username, positionId, opponent);
-        return createJson(Type.INFO, message);
     }
 
     /**
