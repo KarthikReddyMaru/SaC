@@ -72,23 +72,11 @@ public class GameStateService {
     }
 
     public void endGameState(String roomId) {
-        // TODO - Return winner
         gameStates.remove(roomId);
     }
 
     public boolean exists(String roomId) {
         return gameStates.containsKey(roomId);
-    }
-
-    public void setActionPendingOn(String roomId, int position) {
-        GameState gameState = gameStates.get(roomId);
-        gameState.setActionPending(true);
-        gameState.setActionPendingOn(position);
-    }
-
-    public void setCurrentPlayerId(String roomId, String playerId) {
-        GameState gameState = gameStates.get(roomId);
-        gameState.setCurrentPlayerId(playerId);
     }
 
     public String getOpponentId(String roomId, String playerId) {

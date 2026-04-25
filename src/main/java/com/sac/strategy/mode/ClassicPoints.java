@@ -11,6 +11,7 @@ import com.sac.strategy.action.Action;
 import com.sac.strategy.position.Roll;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
+import com.sac.util.mode.ClassicPointsUtil;
 import com.sac.visitor.postaction.ClassicPointsPostActionVisitor;
 import com.sac.visitor.preaction.ClassicPointsPreActionVisitor;
 import com.sac.visitor.prechoose.ClassicPointsPreChooseVisitor;
@@ -80,12 +81,7 @@ public class ClassicPoints implements Mode {
             if (winner != null) {
                 GameState gameState = gameStateService.getGameState(roomId);
                 log.info("Game completed, preparing to close connections of room - {}", roomId);
-                gameState.setGameplayStatus(FINISHED);
-                gameState.setWinner(winner);
-                gameState.setActionPendingOn(null);
-                gameState.setCurrentPlayerId(null);
-                gameState.setActionPending(false);
-                gameState.setActionPendingOnActor(null);
+                ClassicPointsUtil.endGameWithWinner(winner, gameState);
                 messageService.broadcastMessage(
                         MessageFormat.endGameWithWinner(gameState), roomId);
                 webSocketSession.close(CloseStatus.NORMAL);

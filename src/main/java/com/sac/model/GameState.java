@@ -8,6 +8,8 @@ import lombok.Data;
 
 import java.util.List;
 
+import static com.sac.model.GameState.GameplayStatus.FINISHED;
+
 @Data
 @Builder(toBuilder = true)
 public class GameState {
@@ -67,15 +69,6 @@ public class GameState {
                 .findFirst()
                 .orElseThrow(IllegalStateException::new)
                 .getPositions()[position];
-    }
-
-    public Player getPlayer(String username) {
-        return this
-                .getPlayers()
-                .stream()
-                .filter(player -> player.getUsername().equals(username))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new);
     }
 
     public Player getOpponent(String username) {

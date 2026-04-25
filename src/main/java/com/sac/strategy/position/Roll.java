@@ -7,6 +7,7 @@ import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Spawn;
 import com.sac.util.MessageFormat;
+import com.sac.util.mode.ClassicPointsUtil;
 import com.sac.visitor.prechoose.PreChooseVisitor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -38,30 +39,15 @@ public class Roll implements PositionSelectionHandlerStrategy {
 
         if (position.isCapturedByOpponent()) {
             messageService.broadcastMessage(MessageFormat.capturedTrouble(opponentPlayer, positionId), roomId);
-            gameState.setActionPending(false);
-            gameState.setActionPendingOn(null);
-            gameState.setCurrentPlayerId(opponentPlayer);
-            gameState.setActionPendingOnActor(null);
-            gameState.setState(ROLL);
+            ClassicPointsUtil.transitionRollToNextPlayer(opponentPlayer, gameState);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (position.getActor() == null) {
-            gameState.setActionPending(true);
-            gameState.setActionPendingOn(positionId);
-            gameState.setActionPendingOnActor(null);
+            ClassicPointsUtil.requirePlayerAction(currentPlayer, gameState, positionId);
             spawn.performAction(webSocketSession, null, roomId);
-            gameState.setActionPending(false);
-            gameState.setActionPendingOn(null);
-            gameState.setActionPendingOnActor(null);
-            gameState.setState(ROLL);
-            gameState.setCurrentPlayerId(opponentPlayer);
+            ClassicPointsUtil.transitionRollToNextPlayer(opponentPlayer, gameState);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else {
-            gameState.setCurrentPlayerId(currentPlayer);
-            gameState.setActionPending(true);
-            gameState.setActionPendingOn(positionId);
-            gameState.setState(ACTION_REQUIRED);
-            gameState.setActionPendingOnActor(position.getActor()
-                                                      .getCurrentState());
+            ClassicPointsUtil.requirePlayerAction(currentPlayer, gameState, positionId);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         }
     }

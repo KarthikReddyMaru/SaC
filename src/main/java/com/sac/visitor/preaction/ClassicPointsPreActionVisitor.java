@@ -39,7 +39,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (baseCheck(webSocketSession, username, gameState)) {
+        if (isActionIllegal(webSocketSession, username, gameState)) {
             return false;
         } else {
             Actor actor = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn())
@@ -61,7 +61,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (baseCheck(webSocketSession, username, gameState)) {
+        if (isActionIllegal(webSocketSession, username, gameState)) {
             return false;
         }
 
@@ -106,7 +106,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Specialization requestedTransition = actionContext.getSpecialization();
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (baseCheck(webSocketSession, username, gameState)) return false;
+        if (isActionIllegal(webSocketSession, username, gameState)) return false;
 
         Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
         Actor actor = position.getActor();
@@ -138,7 +138,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         GameState gameState = gameStateService.getGameState(roomId);
         Integer playerPositionId = gameState.getActionPendingOn();
 
-        if (baseCheck(webSocketSession, username, gameState)) return false;
+        if (isActionIllegal(webSocketSession, username, gameState)) return false;
 
         Position playerPosition = gameState.getPlayerPosition(username, playerPositionId);
         Actor actor = playerPosition.getActor();
@@ -168,16 +168,24 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         return true;
     }
 
-    private boolean baseCheck(WebSocketSession webSocketSession, String username, GameState gameState) {
-        if (gameState.getActionPendingOn() == null ||
-            !gameState.isActionPending() ||
-            !gameState.getCurrentPlayerId()
-                      .equals(username)) {
-            messageService.sendRawPayload(webSocketSession, MessageFormat.illegalAction());
-            if (username.equals(gameState.getCurrentPlayerId()))
-                gameState.setState(ROLL);
+    /**
+     * Validates if the action requested by the player is legal based on the current game state.
+     * If illegal, it notifies the player.
+     *
+     * @param session   The WebSocket session of the player attempting the action.
+     * @param username  The username of the player attempting the action.
+     * @param gameState The current state of the game room.
+     * @return true if the action is illegal and should be blocked; false if the action can proceed.
+     */
+    private boolean isActionIllegal(WebSocketSession session, String username, GameState gameState) {
+        boolean isCurrentPlayer = username.equals(gameState.getCurrentPlayerId());
+        boolean hasPendingAction = gameState.isActionPending() && gameState.getActionPendingOn() != null;
+
+        if (!isCurrentPlayer || !hasPendingAction) {
+            messageService.sendRawPayload(session, MessageFormat.illegalAction());
             return true;
         }
+
         return false;
     }
 }

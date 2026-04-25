@@ -11,11 +11,10 @@ import com.sac.strategy.action.Kamikaze;
 import com.sac.strategy.action.Spawn;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
+import com.sac.util.mode.ClassicPointsUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
-
-import static com.sac.model.GameState.State.ROLL;
 
 @Component
 @RequiredArgsConstructor
@@ -28,17 +27,13 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     @Override
     public void visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
 
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String opponent = gameState.getOpponent(username).getUsername();
 
+        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
         pointsService.addPoints(roomId, username, spawn.pointsForSuccessfulAction());
-        gameState.setActionPending(false);
-        gameState.setActionPendingOn(null);
-        gameState.setCurrentPlayerId(opponent);
-        gameState.setActionPendingOnActor(null);
-        gameState.setState(ROLL);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -50,13 +45,8 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         GameState gameState = gameStateService.getGameState(roomId);
         String opponent = gameState.getOpponent(username).getUsername();
 
+        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
         pointsService.addPoints(roomId, username, kamikaze.pointsForSuccessfulAction());
-        gameState.setActionPendingOn(null);
-        gameState.setActionPending(false);
-        gameState.setCurrentPlayerId(opponent);
-        gameState.setActionPendingOnActor(null);
-        gameState.setState(ROLL);
-
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -65,16 +55,11 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-
         GameState gameState = gameStateService.getGameState(roomId);
         String opponent = gameState.getOpponent(username).getUsername();
 
+        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
         pointsService.addPoints(roomId, username, evolve.pointsForSuccessfulAction());
-        gameState.setActionPending(false);
-        gameState.setActionPendingOn(null);
-        gameState.setCurrentPlayerId(opponent);
-        gameState.setState(ROLL);
-        gameState.setActionPendingOnActor(null);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
@@ -83,16 +68,11 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-
         GameState gameState = gameStateService.getGameState(roomId);
 
-
         pointsService.addPoints(roomId, username, attackAndCapture.pointsForSuccessfulAction());
-        gameState.setCurrentPlayerId(username);
-        gameState.setActionPendingOn(null);
-        gameState.setActionPending(false);
-        gameState.setState(ROLL);
-        gameState.setActionPendingOnActor(null);
+        ClassicPointsUtil.transitionRollToNextPlayer(username, gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
+
 }
