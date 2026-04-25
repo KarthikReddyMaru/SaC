@@ -103,7 +103,8 @@
                 <button onclick="sendActionPayload('EVOLVE')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Evolve</button>
                 <button onclick="sendActionPayload('ATTACK_AND_CAPTURE', 1)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Attack</button>
                 <button onclick="testSendPosition()" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Position</button>
-                <button id="btn-guide" onclick="toggleGuide()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2">Guide: ON</button>
+
+                <button id="btn-guide" onclick="toggleGuide()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-all duration-300 shadow-sm ml-2">Guide: OFF</button>
             </div>
         </div>
 
@@ -159,7 +160,7 @@
                 </div>
             </div>
 
-            <div id="guide-panel" class="w-full bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto">
+            <div id="guide-panel" style="display: none;" class="w-full bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto">
                 <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-3 md:gap-4">
                     <div class="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex-shrink-0 shadow-inner">
                         <span class="text-[10px] uppercase tracking-[0.1em] text-blue-400 font-bold">Commander's Guide</span>
@@ -192,7 +193,8 @@
 <script>
     // Global State Variables
     let ws;
-    let isGuideEnabled = true;
+    let isGuideEnabled = false; // Default is now OFF
+    let guideIdleTimer = null;  // Timer for the Idle Nudge feature
 
     // SECURE IDENTITY MANAGER (Replaces global myUsername)
     const IdentityManager = (() => {
@@ -321,6 +323,33 @@
     }
 
     // ========================================================
+    // IDLE NUDGE LOGIC
+    // ========================================================
+
+    function manageGuideIdleNudge() {
+        // Clear any existing timer so it resets
+        clearTimeout(guideIdleTimer);
+
+        const btn = document.getElementById('btn-guide');
+        // Instantly remove glow if state changes or user makes a move
+        btn.classList.remove('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
+
+        // We only want to nudge if the guide is OFF, and it is the USER'S turn.
+        if (!isGuideEnabled && globalGameState && globalGameState.currentPlayerId === IdentityManager.get()) {
+
+            // Set timer for 10 seconds of inactivity
+            guideIdleTimer = setTimeout(() => {
+                // Double check it's still off and still our turn just in case
+                if (!isGuideEnabled && globalGameState.currentPlayerId === IdentityManager.get()) {
+                    btn.classList.add('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
+                    showToast("info", "Commander, tactical guide is available if you need assistance.");
+                }
+            }, 10000);
+        }
+    }
+
+
+    // ========================================================
     // STATE ENGINE & RENDERING LOGIC
     // ========================================================
 
@@ -383,6 +412,10 @@
                     updateGuide(`It is ${gameState.currentPlayerId}'s turn. Stand by.`);
                 }
             }
+
+            // Reset the Idle Nudge Timer every time the game state updates
+            manageGuideIdleNudge();
+
         } catch (e) {
             console.error("Error in updateGameState:", e);
         }
@@ -536,6 +569,9 @@
     function executeRollAnimation(finalVal1, finalVal2, isWildcard) {
         isAnimatingRoll = true;
 
+        // Clear the Nudge Timer so it doesn't trigger while the dice are spinning
+        clearTimeout(guideIdleTimer);
+
         const d1 = document.getElementById('die-1');
         const d2 = document.getElementById('die-2');
         if(!d1 || !d2) {
@@ -610,6 +646,9 @@
                         }
                     }
 
+                    // Restart Nudge timer now that the turn/action is ready
+                    manageGuideIdleNudge();
+
                 }, 1000);
             }
         }, 50);
@@ -660,7 +699,7 @@
             <div class="grid grid-cols-2 gap-3 w-full px-2">`;
 
         if (actorType === "NOVICE") {
-            updateGuide("Novice Selected: Evolve into a Fighter to enable captures, or execute a Kamikaze. Kamikaze permanently reverses the target's most recent state change (e.g., Captured ➔ Fighter, or Fighter ➔ Novice). It can liberate your captured bases, but undone states cannot be restored. Proceed with caution. 🤫");
+            updateGuide("Novice Selected: Evolve to a Fighter, or trigger a Kamikaze! 💥 Kamikaze sacrifices your Novice to rewind the target's timeline. Example: A tile went Novice ➔ Fighter ➔ Captured. Kamikaze blasts away 'Captured', reverting it to a Fighter! Hit it again, and the Fighter devolves back to Novice. The state you blow up is gone forever. Great for liberating your captured bases or demoting enemy Fighters. Handle with care! ⚠️");
             html += `
                 <button onclick="sendActionPayload('EVOLVE')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Evolve</button>
                 <button onclick="triggerKamikazeSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Kamikaze</button>
@@ -874,14 +913,20 @@
         const btn = document.getElementById('btn-guide');
         const panel = document.getElementById('guide-panel');
 
+        // Immediately clear glow
+        btn.classList.remove('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
+
         if (isGuideEnabled) {
             btn.innerText = "Guide: ON";
             btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2";
             panel.style.display = 'block';
+            clearTimeout(guideIdleTimer);
         } else {
             btn.innerText = "Guide: OFF";
             btn.className = "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2";
             panel.style.display = 'none';
+            // Resume idle checking if it's our turn
+            if (globalGameState) manageGuideIdleNudge();
         }
     }
 
