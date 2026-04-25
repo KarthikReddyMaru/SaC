@@ -8,18 +8,13 @@ import com.sac.model.message.ActionContext;
 import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
-import com.sac.strategy.action.AttackAndCapture;
-import com.sac.strategy.action.Evolve;
-import com.sac.strategy.action.Kamikaze;
-import com.sac.strategy.action.Spawn;
+import com.sac.strategy.action.*;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
-
-import static com.sac.model.GameState.State.ROLL;
 
 @Component
 @RequiredArgsConstructor
@@ -112,7 +107,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Actor actor = position.getActor();
 
         if (actor == null) {
-            messageService.sendSystemMessage(webSocketSession, "SPAWN actor before EVOLVE", ServerResponse.Type.ERROR);
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(position.getPositionId()));
             return false;
         } else if (requestedTransition == null) {
             messageService.sendSystemMessage(webSocketSession, "Choose Specialization to evolve",
@@ -163,6 +158,48 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                             .isCapturedByOpponent()) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.capturedTrouble(username, opponentPositionId));
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean visit(BlackOut blackOut, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        String currentPlayerId = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+
+        GameState gameState = gameStateService.getGameState(roomId);
+
+        if (isActionIllegal(webSocketSession, currentPlayerId, gameState)) return false;
+
+        Integer destinationPositionId = actionContext.getDestinationPosition();
+        String destinationPositionHolder = actionContext.getDestinationPositionHolder();
+        boolean isPlayerPresent = gameState.getPlayers()
+                                           .stream()
+                                           .anyMatch(player -> player.getUsername().equals(destinationPositionHolder));
+
+        if (destinationPositionId == null || destinationPositionHolder == null || !isPlayerPresent) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
+            return false;
+        }
+
+        Integer sourcePositionId = gameState.getActionPendingOn();
+        Position destinationPosition = gameState.getPlayerPosition(destinationPositionHolder, destinationPositionId);
+        Position currentPlayerPosition = gameState.getPlayerPosition(currentPlayerId, sourcePositionId);
+        Actor currentPlayerPositionActor = currentPlayerPosition.getActor();
+
+        if (destinationPosition.getActor() == null) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
+            return false;
+        } else if (currentPlayerPositionActor == null) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(sourcePositionId));
+            return false;
+        } else if (!currentPlayerPositionActor.getAllowedActions()
+                                              .contains(blackOut.getActionType())) {
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.actorCannotPerform(currentPlayerPositionActor.getCurrentState(),
+                                                                           blackOut.getActionType()));
             return false;
         }
         return true;

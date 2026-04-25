@@ -5,10 +5,7 @@ import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.service.PointsService;
-import com.sac.strategy.action.AttackAndCapture;
-import com.sac.strategy.action.Evolve;
-import com.sac.strategy.action.Kamikaze;
-import com.sac.strategy.action.Spawn;
+import com.sac.strategy.action.*;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import com.sac.util.mode.ClassicPointsUtil;
@@ -75,4 +72,15 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
+    @Override
+    public void visit(BlackOut blackOut, WebSocketSession webSocketSession, ActionContext actionContext) {
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        GameState gameState = gameStateService.getGameState(roomId);
+        String opponent = gameState.getOpponent(username).getUsername();
+
+        pointsService.addPoints(roomId, username, blackOut.pointsForSuccessfulAction());
+        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+    }
 }
