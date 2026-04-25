@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sac.model.GameState;
 import com.sac.model.actor.Specialization;
+import com.sac.model.message.PositionSelectionContext;
 import com.sac.model.message.ServerResponse;
 import com.sac.model.message.ServerResponse.Type;
 import com.sac.strategy.action.GameAction;
@@ -78,6 +79,10 @@ public class MessageFormat {
     public static String rollMessage(String username) {
         String message = String.format("%s will roll the dice now", username);
         return createJson(Type.INFO, message);
+    }
+
+    public static String rollResult(PositionSelectionContext positionSelectionContext) {
+        return createJson(Type.POSITION_SELECTION, positionSelectionContext);
     }
 
     /**

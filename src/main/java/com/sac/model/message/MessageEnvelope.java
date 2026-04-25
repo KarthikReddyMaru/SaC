@@ -10,6 +10,6 @@ public class MessageEnvelope {
     private JsonNode payload;
 
     public enum Type {
-        ACTION, POSITION, CHAT
+        ACTION, POSITION, CHAT, POSITION_SELECTION
     }
 }

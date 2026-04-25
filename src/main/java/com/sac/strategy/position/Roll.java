@@ -65,8 +65,6 @@ public class Roll implements PositionSelectionHandlerStrategy {
             gameState.setState(ACTION_REQUIRED);
             gameState.setActionPendingOnActor(position.getActor()
                                                       .getCurrentState());
-            String infoMessageForOpponent = String.format("%s is performing action", currentPlayer);
-            messageService.sendMessage(webSocketSession, infoMessageForOpponent, roomId);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         }
     }
