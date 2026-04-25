@@ -59,36 +59,36 @@ public class MessageFormat {
     }
 
     /**
-     * Failed Actions
+     * Tactical HUD: System & Error Responses
      */
 
     public static String illegalAction() {
-        String message = "Action unavailable";
+        String message = "Command rejected. This tactical action is currently restricted.";
         return createJson(Type.ERROR, message);
     }
 
     public static String inValidDestinationProvided() {
-        String message = "Please choose a valid destination";
+        String message = "Targeting error. The selected coordinates are invalid or out of bounds.";
         return createJson(Type.ERROR, message);
     }
 
     public static String noActorPresent(int position) {
-        String message = String.format("Cannot perform action: No unit at position %d", position);
+        String message = String.format("Command failed. No allied unit detected at Position %d.", position);
         return createJson(Type.ERROR, message);
     }
 
     public static String capturedTrouble(String opponent, int positionId) {
-        String message = String.format("Position %d: Already captured by %s", positionId, opponent);
+        String message = String.format("Hostile territory. Position %d is already secured by %s.", positionId, opponent);
         return createJson(Type.ERROR, message);
     }
 
     public static String actorCannotPerform(Specialization specialization, GameAction gameAction) {
-        String message = String.format("Incompatible: %s cannot use %s.", specialization, gameAction);
+        String message = String.format("Protocol denied. %s class units lack the capability to execute %s.", specialization, gameAction);
         return createJson(Type.ERROR, message);
     }
 
     public static String successPointsMessage(String username, int points) {
-        String message = String.format("%s scored! (+%d pts)", username, points);
+        String message = String.format("Objective secured. %s earned +%d PTS.", username, points);
         return createJson(Type.INFO, message);
     }
 
