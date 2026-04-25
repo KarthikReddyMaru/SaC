@@ -287,7 +287,10 @@
                         } else {
                             globalGameState = msg.content;
                             updateGameState(msg.content);
-                            if(msg.type === "FINISH") showGameOverScreen(msg.content);
+                            // Fixed: Check actual payload state, not the transient message type
+                            if (globalGameState.gameplayStatus === 'FINISHED') {
+                                showGameOverScreen(globalGameState);
+                            }
                         }
                         break;
                     case "INFO":
@@ -295,12 +298,6 @@
                         break;
                     case "ERROR":
                         appendSystemLog("error", msg.content);
-                        // BUG FIX: Unlock UI buffer from stuck loading states
-                        // and render the UI based on the read-only globalGameState.
-                        isAnimatingRoll = false;
-                        if (globalGameState) {
-                            updateGameState(globalGameState);
-                        }
                         break;
                     case "MESSAGE":
                         appendChatLog(msg.sender, msg.content);
@@ -446,7 +443,10 @@
             if (pos && !pos.capturedByOpponent) {
                 isWildcardSelecting = false;
                 ws.send(JSON.stringify({ type: "POSITION", payload: { position: posId } }));
-                resetActionArea("Position transmitted. Awaiting server synchronization...");
+
+                if (globalGameState) {
+                    updateGameState(globalGameState);
+                }
             }
         }
 
@@ -561,46 +561,47 @@
                 d1Text.innerText = finalVal1;
                 d2Text.innerText = finalVal2;
 
-                const isMyRoll = (globalGameState && globalGameState.currentPlayerId === myUsername);
-
-                if (isWildcard) {
-                    if(btn) {
-                        btn.innerText = "WILDCARD!";
-                        btn.classList.replace('bg-blue-600', 'bg-amber-600');
-                        btn.classList.replace('hover:bg-blue-500', 'hover:bg-amber-500');
-                    }
-                    // BUG FIX: Removed triggerWildcardSelection() from here.
-                    // Safely handled below under the isMyRoll guard.
-                } else {
+                if (isWildcard && btn) {
+                    btn.innerText = "WILDCARD!";
+                    btn.classList.replace('bg-blue-600', 'bg-amber-600');
+                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-amber-500');
+                } else if (btn) {
                     let val1 = finalVal1 === '' ? 0 : parseInt(finalVal1);
                     let val2 = finalVal2 === '' ? 0 : parseInt(finalVal2);
                     let sum = val1 + val2;
 
-                    if(btn) {
-                        btn.innerText = "ROLLED: " + sum;
-                        btn.classList.replace('bg-blue-600', 'bg-emerald-600');
-                        btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
-                    }
+                    btn.innerText = "ROLLED: " + sum;
+                    btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
                 }
 
                 setTimeout(() => {
                     isAnimatingRoll = false;
 
-                    if (pendingGameState) {
+                    const hadPendingState = (pendingGameState !== null);
+
+                    if (hadPendingState) {
                         globalGameState = pendingGameState;
                         updateGameState(pendingGameState);
                         pendingGameState = null;
 
-                        if (globalGameState.type === "FINISH") {
+                        if (globalGameState.gameplayStatus === 'FINISHED') {
                             showGameOverScreen(globalGameState);
                         }
                     } else {
-                        if (isMyRoll) {
-                            if (isWildcard) triggerWildcardSelection();
-                            else resetActionArea("Analyzing target position...");
-                        } else {
-                            if (isWildcard) resetActionArea("Opponent triggered a WILDCARD. Waiting for selection...");
-                            else resetActionArea("Opponent finished rolling. Awaiting their move...");
+                        if (globalGameState) {
+                            updateGameState(globalGameState);
+                        }
+                    }
+
+                    const isMyTurnNow = (globalGameState && globalGameState.currentPlayerId === myUsername);
+
+                    if (isWildcard) {
+                        if (isMyTurnNow) triggerWildcardSelection();
+                        else resetActionArea("Opponent triggered a WILDCARD. Waiting for selection...");
+                    } else {
+                        if (!hadPendingState && isMyTurnNow && globalGameState && globalGameState.state === 'ROLL') {
+                            resetActionArea("Analyzing target position...");
                         }
                     }
 
@@ -623,16 +624,21 @@
         `;
 
         const p1 = globalGameState.players.find(p => p.username === myUsername);
-        if (p1) {
-            for(let i=1; i<=10; i++) {
+        for(let i=1; i<=10; i++) {
+            const p1Box = document.getElementById(`p1-box-${i}`);
+            if (p1Box) {
                 const pos = p1.positions.find(p => p.positionId === i);
-                if(pos && !pos.capturedByOpponent) {
-                    const box = document.getElementById(`p1-box-${i}`);
-                    if(box) {
-                        box.classList.add('ring-4', 'ring-amber-500', 'animate-pulse', 'z-10', 'shadow-[0_0_15px_rgba(245,158,11,0.6)]', 'cursor-crosshair');
-                        box.classList.replace('border-zinc-800', 'border-amber-500');
-                    }
+                if (pos && !pos.capturedByOpponent) {
+                    p1Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                    p1Box.classList.add('ring-2', 'ring-amber-500/70', 'animate-pulse', 'z-10', 'shadow-[0_0_10px_rgba(245,158,11,0.4)]', 'cursor-crosshair', 'border-amber-500');
+                } else {
+                    p1Box.classList.add('cursor-not-allowed', 'opacity-50');
                 }
+            }
+
+            const p2Box = document.getElementById(`p2-box-${i}`);
+            if (p2Box) {
+                p2Box.classList.add('cursor-not-allowed', 'opacity-50');
             }
         }
     }
@@ -679,22 +685,20 @@
         `;
 
         for(let i=1; i<=10; i++) {
-            const box = document.getElementById(`p1-box-${i}`);
-            if (box) {
+            const p1Box = document.getElementById(`p1-box-${i}`);
+            if (p1Box) {
                 if (i !== globalGameState.actionPendingOn) {
-                    box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
-                    box.classList.replace('border-zinc-800', 'border-red-500');
+                    p1Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                    p1Box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
                 } else {
-                    box.classList.add('cursor-not-allowed');
+                    p1Box.classList.add('cursor-not-allowed', 'opacity-50');
                 }
             }
-        }
 
-        for(let i=1; i<=10; i++) {
-            const box = document.getElementById(`p2-box-${i}`);
-            if(box) {
-                box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
-                box.classList.replace('border-zinc-800', 'border-red-500');
+            const p2Box = document.getElementById(`p2-box-${i}`);
+            if(p2Box) {
+                p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                p2Box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
             }
         }
     }
@@ -711,15 +715,20 @@
         `;
 
         const p2 = globalGameState.players.find(p => p.username !== myUsername);
-        if (p2) {
-            for(let i=1; i<=10; i++) {
+        for(let i=1; i<=10; i++) {
+            const p1Box = document.getElementById(`p1-box-${i}`);
+            if (p1Box) {
+                p1Box.classList.add('cursor-not-allowed', 'opacity-50');
+            }
+
+            const p2Box = document.getElementById(`p2-box-${i}`);
+            if (p2Box) {
                 const pos = p2.positions.find(p => p.positionId === i);
-                if(pos && !pos.capturedByOpponent) {
-                    const box = document.getElementById(`p2-box-${i}`);
-                    if(box) {
-                        box.classList.add('ring-4', 'ring-red-500', 'animate-pulse', 'z-20', 'shadow-[0_0_15px_rgba(239,68,68,0.6)]', 'cursor-crosshair');
-                        box.classList.replace('border-zinc-800', 'border-red-500');
-                    }
+                if (pos && !pos.capturedByOpponent) {
+                    p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                    p2Box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
+                } else {
+                    p2Box.classList.add('cursor-not-allowed', 'opacity-50');
                 }
             }
         }
@@ -747,7 +756,10 @@
         isAttackSelecting = false;
 
         ws.send(JSON.stringify({ type: "ACTION", payload: payload }));
-        resetActionArea("Action executed. Awaiting server resolution...");
+
+        if (globalGameState) {
+            updateGameState(globalGameState);
+        }
     }
 
     /**
@@ -782,11 +794,20 @@
         if (type === "error") colorClass = "bg-red-500/10 border-red-500/20 text-red-400";
         if (type === "success") colorClass = "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
 
-        container.innerHTML += `
-            <div class="p-2.5 border rounded-lg text-xs flex gap-2 ${colorClass}">
-                <span class="font-mono mt-0.5 opacity-75">[${time}]</span>
-                <span>${text}</span>
-            </div>`;
+        const wrapper = document.createElement('div');
+        wrapper.className = `p-2.5 border rounded-lg text-xs flex gap-2 ${colorClass}`;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = "font-mono mt-0.5 opacity-75";
+        timeSpan.textContent = `[${time}]`;
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = text;
+
+        wrapper.appendChild(timeSpan);
+        wrapper.appendChild(textSpan);
+        container.appendChild(wrapper);
+
         container.scrollTop = container.scrollHeight;
     }
 
@@ -800,13 +821,21 @@
         const bgClass = isMe ? "bg-blue-600 text-white border-blue-500" : "bg-zinc-800/50 border-zinc-700/50 text-zinc-200";
         const radiusClass = isMe ? "rounded-tr-sm" : "rounded-tl-sm";
 
-        container.innerHTML += `
-            <div class="flex flex-col gap-1 max-w-[85%] ${alignClass}">
-                <span class="${colorClass} font-semibold text-[10px] uppercase tracking-wide">${senderName}</span>
-                <div class="px-3 py-2 border rounded-xl ${radiusClass} text-xs shadow-sm ${bgClass}">
-                    ${text}
-                </div>
-            </div>`;
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex flex-col gap-1 max-w-[85%] ${alignClass}`;
+
+        const senderSpan = document.createElement('span');
+        senderSpan.className = `${colorClass} font-semibold text-[10px] uppercase tracking-wide`;
+        senderSpan.textContent = senderName;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `px-3 py-2 border rounded-xl ${radiusClass} text-xs shadow-sm ${bgClass} whitespace-pre-wrap break-words`;
+        msgDiv.textContent = text;
+
+        wrapper.appendChild(senderSpan);
+        wrapper.appendChild(msgDiv);
+        container.appendChild(wrapper);
+
         container.scrollTop = container.scrollHeight;
     }
 
