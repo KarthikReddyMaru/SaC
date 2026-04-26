@@ -22,6 +22,18 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     private final MessageService messageService;
 
     @Override
+    public void visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        GameState gameState = gameStateService.getGameState(roomId);
+        String opponent = gameState.getOpponent(username).getUsername();
+
+        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+    }
+
+    @Override
     public void visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);

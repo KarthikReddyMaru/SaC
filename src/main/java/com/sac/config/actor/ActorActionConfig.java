@@ -17,11 +17,11 @@ public class ActorActionConfig {
 
     static {
         actions.put(RECRUIT,
-                    Set.of(PROMOTE, REVERT));
+                    Set.of(PROMOTE, REVERT, DROP));
         actions.put(VETERAN,
-                    Set.of(CAPTURE));
+                    Set.of(CAPTURE, DROP));
         actions.put(PHANTOM,
-                    Set.of(BLACKOUT));
+                    Set.of(BLACKOUT, DROP));
     }
 
     public static Set<GameAction> getAllowedActions(Specialization specialization) {

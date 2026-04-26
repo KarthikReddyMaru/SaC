@@ -6,6 +6,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 public interface PreActionVisitor {
 
+    boolean visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext);
     boolean visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext);
     boolean visit(Revert revert, WebSocketSession webSocketSession, ActionContext actionContext);
     boolean visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext);

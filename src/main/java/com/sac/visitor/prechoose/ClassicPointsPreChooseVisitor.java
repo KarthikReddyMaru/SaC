@@ -54,17 +54,36 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
         }
 
         if (!gameState.isWildCardActive()) {
-            int i1 = random.nextInt(0, 6);
-            int i2 = random.nextInt(0, 6);
-            PositionSelectionContext positionSelectionContext = new PositionSelectionContext(new int[]{i1, i2},
-                                                                                             i1 + i2 == 0);
-            if (i1 + i2 == 0) {
+
+            int targetOutcome = random.nextInt(1, 12);
+
+            int i1;
+            int i2;
+            boolean isWildcard = false;
+
+            if (targetOutcome == 11) {
+
+                isWildcard = true;
+                i1 = 0;
+                i2 = 0;
                 gameState.setWildCardActive(true);
-                messageService.broadcastMessage(MessageFormat.rollResult(positionSelectionContext), roomId);
+
+            } else {
+
+                int minI1 = Math.max(0, targetOutcome - 5);
+                int maxI1 = Math.min(5, targetOutcome);
+
+                i1 = random.nextInt(minI1, maxI1 + 1);
+                i2 = targetOutcome - i1;
+                positionContext.setPosition(targetOutcome);
+            }
+
+            PositionSelectionContext positionSelectionContext = new PositionSelectionContext(new int[]{i1, i2}, isWildcard);
+            messageService.broadcastMessage(MessageFormat.rollResult(positionSelectionContext), roomId);
+
+            if (isWildcard) {
                 return false;
             }
-            positionContext.setPosition(i1 + i2);
-            messageService.broadcastMessage(MessageFormat.rollResult(positionSelectionContext), roomId);
         }
 
         int rolledNumber = positionContext.getPosition();

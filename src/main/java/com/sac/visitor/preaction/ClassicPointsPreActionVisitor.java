@@ -27,6 +27,34 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     private int maxPositionPerPlayer;
 
     @Override
+    public boolean visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {
+
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        GameState gameState = gameStateService.getGameState(roomId);
+
+        if (isActionIllegal(webSocketSession, username, gameState)) return false;
+
+        Integer sourcePositionId = gameState.getActionPendingOn();
+        Position sourcePosition = gameState.getPlayerPosition(username, sourcePositionId);
+
+        if (sourcePosition.getActor() == null) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(sourcePositionId));
+            return false;
+        } else if (!sourcePosition.getActor()
+                                  .getAllowedActions()
+                                  .contains(drop.getActionType())) {
+            messageService.sendRawPayload(webSocketSession,
+                                          MessageFormat.actorCannotPerform(
+                                                  sourcePosition.getActor().getCurrentState(),
+                                                  drop.getActionType()));
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
     public boolean visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);

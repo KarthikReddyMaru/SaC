@@ -3,6 +3,7 @@ package com.sac.strategy.action;
 import java.util.Arrays;
 
 public enum GameAction {
+    DROP,
     SPAWN,
     PROMOTE,
     REVERT,
