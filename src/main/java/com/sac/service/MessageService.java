@@ -67,11 +67,6 @@ public class MessageService {
         }
     }
 
-    public void sendRawPayload(String username, String roomId, String message) {
-        WebSocketSession webSocketSession = roomConnectionService.getPlayerSession(roomId, username);
-        sendRawPayload(webSocketSession, message);
-    }
-
     public void sendRawPayload(WebSocketSession session, String message) {
         if (session.isOpen()) {
             try {

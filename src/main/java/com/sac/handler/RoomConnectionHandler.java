@@ -22,42 +22,26 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class RoomConnectionHandler extends TextWebSocketHandler {
 
-    private record UserSessionInfo(String roomId, String sessionId) {}
-
     private final EnvelopeHandlerRegistry envelopeHandlerRegistry;
     private final GameplayService gameplayService;
     private final ObjectMapper objectMapper;
 
-    private final ConcurrentHashMap<String, UserSessionInfo> sessionRoomMap = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession webSocketSession) throws Exception {
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        String roomId = gameplayService.tryJoin(webSocketSession);
-        if (roomId != null)
-            sessionRoomMap.put(username, new UserSessionInfo(roomId, webSocketSession.getId()));
+        gameplayService.tryJoin(webSocketSession);
     }
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession webSocketSession, @NonNull CloseStatus status) throws Exception {
-
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        UserSessionInfo sessionInfo = sessionRoomMap.get(username);
-
-        log.info("{}'s connection lost", username);
-
-        if (sessionInfo.sessionId().equals(webSocketSession.getId())) {
-            sessionRoomMap.remove(username);
-            gameplayService.tryLeave(webSocketSession, sessionInfo.roomId());
-        }
-
-        log.info("{}'s data cleared, details - {}", username, sessionRoomMap.getOrDefault(username, null));
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
+        gameplayService.tryLeave(webSocketSession, roomId);
     }
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession webSocketSession, @NonNull TextMessage message) throws Exception {
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        String roomId = sessionRoomMap.get(username).roomId();
+        String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         MessageEnvelope messageEnvelope = objectMapper.readValue(message.asBytes(), MessageEnvelope.class);
         EnvelopeHandler envelopeHandler = envelopeHandlerRegistry.getInstance(messageEnvelope.getType());
         envelopeHandler.handle(webSocketSession, messageEnvelope, roomId);
