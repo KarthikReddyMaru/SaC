@@ -6,6 +6,7 @@ import com.sac.model.GameState;
 import com.sac.model.message.ActionContext;
 import com.sac.model.message.PositionContext;
 import com.sac.service.GameStateService;
+import com.sac.service.GameplayService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Action;
 import com.sac.strategy.position.Roll;
@@ -32,6 +33,7 @@ import static com.sac.model.GameState.GameplayStatus.FINISHED;
 @RequiredArgsConstructor
 public class ClassicPoints implements Mode {
 
+    private final GameplayService gameplayService;
     @Value("${classic.points}")
     private int pointsToReach;
 
@@ -79,12 +81,7 @@ public class ClassicPoints implements Mode {
             action.postAction(classicPointsPostActionVisitor, webSocketSession, actionContext);
             String winner = this.computeWinner(roomId);
             if (winner != null) {
-                GameState gameState = gameStateService.getGameState(roomId);
-                log.info("Game completed, preparing to close connections of room - {}", roomId);
-                ClassicPointsUtil.endGameWithWinner(winner, gameState);
-                messageService.broadcastMessage(
-                        MessageFormat.endGameWithWinner(gameState), roomId);
-                webSocketSession.close(CloseStatus.NORMAL);
+                gameplayService.endGame(roomId, winner);
             }
         }
     }

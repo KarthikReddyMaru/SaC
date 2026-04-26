@@ -59,6 +59,20 @@ public class MessageFormat {
     }
 
     /**
+     * Connection responses
+     */
+
+    public static String playerDisconnected(String username) {
+        String message = username + " left the battlefield";
+        return createJson(Type.ERROR, message);
+    }
+
+    public static String playerReconnected(String username) {
+        String message = username + " re-joined the battlefield";
+        return createJson(Type.INFO, message);
+    }
+
+    /**
      * Tactical HUD: System & Error Responses
      */
 
