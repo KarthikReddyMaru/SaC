@@ -40,12 +40,16 @@ public class BlackOut implements Action {
         Specialization destinationPositionActorState = destinationPosition.getActor().getCurrentState();
 
         Position[] opponentPositions = gameState.getPlayer(destinationPositionHolder).getPositions();
+        int wipedPositions = 0;
         for (Position opponentPosition : opponentPositions) {
             Actor actor = opponentPosition.getActor();
-            if (actor != null && actor.getCurrentState().equals(destinationPositionActorState))
+            if (actor != null && actor.getCurrentState().equals(destinationPositionActorState)) {
                 opponentPosition.setActor(null);
+                wipedPositions++;
+            }
         }
         currentPlayerPosition.setActor(null);
+        actionContext.setAdditionalInfo(String.valueOf(wipedPositions));
     }
 
     @Override

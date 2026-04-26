@@ -79,7 +79,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         GameState gameState = gameStateService.getGameState(roomId);
         String opponent = gameState.getOpponent(username).getUsername();
 
-        pointsService.addPoints(roomId, username, blackOut.pointsForSuccessfulAction());
+        pointsService.addPoints(roomId, username, Integer.parseInt(actionContext.getAdditionalInfo()));
         ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }

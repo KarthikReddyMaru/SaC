@@ -1,7 +1,8 @@
 package com.sac.model.message;
 
-import com.sac.strategy.action.GameAction;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sac.model.actor.Specialization;
+import com.sac.strategy.action.GameAction;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,5 +16,7 @@ public class ActionContext {
     private String sourcePositionHolder;
     private String destinationPositionHolder;
     private Specialization specialization;
+    @JsonIgnore
+    private String additionalInfo;
 
 }
