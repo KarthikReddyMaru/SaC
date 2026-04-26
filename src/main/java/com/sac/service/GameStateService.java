@@ -5,11 +5,13 @@ import com.sac.model.GameState;
 import com.sac.model.GameState.Player;
 import com.sac.model.Position;
 import com.sac.strategy.position.PositionSelection;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -26,14 +28,13 @@ public class GameStateService {
     @Value("${player.total_positions}")
     private int playerPositions;
 
-    public void initializeGameState(String roomId, List<String> players,
+    public void initializeGameState(String roomId, List<PlayerMetadata> players,
                                     GameMode gameMode, Integer totalPlayers) {
         if (!gameStates.containsKey(roomId)) {
             GameState gameState = GameState
                     .builder()
                     .roomId(roomId)
                     .players(initializePlayers(players))
-                    .currentPlayerId(players.getFirst())
                     .actionPending(false)
                     .actionPendingOn(null)
                     .actionPendingOnActor(null)
@@ -46,25 +47,34 @@ public class GameStateService {
                     .totalMovesPlayed(0)
                     .totalAvailableMoves(Integer.MAX_VALUE)
                     .build();
+
+            gameState.setTurnOrder(initializeTurnOrder(gameState));
             gameStates.put(roomId, gameState);
         }
     }
 
-    private List<Player> initializePlayers(List<String> players) {
+    private List<Player> initializePlayers(List<PlayerMetadata> players) {
         return players.stream()
-                      .map(username -> {
+                      .map(metadata -> {
                           Position[] positions = new Position[playerPositions + 1];
                           for (int i = 0; i <= playerPositions; i++) {
                               positions[i] = Position.builder()
                                                      .positionId(i)
                                                      .actor(null)
-                                                     .belongsTo(username)
+                                                     .belongsTo(metadata.username)
                                                      .isCapturedByOpponent(false)
                                                      .build();
                           }
-                          return new Player(positions, username, 0);
+                          return new Player(positions, metadata.username, metadata.clientId, 0);
                       })
                       .collect(Collectors.toList());
+    }
+
+    private ArrayDeque<Player> initializeTurnOrder(GameState gameState) {
+        List<Player> players = gameState.getPlayers();
+        ArrayDeque<Player> turnOrder = new ArrayDeque<>();
+        players.forEach(turnOrder::addLast);
+        return turnOrder;
     }
 
     public GameState getGameState(String roomId) {
@@ -81,13 +91,13 @@ public class GameStateService {
         return gameStates.containsKey(roomId);
     }
 
-    public boolean exists(String username, String roomId) {
+    public boolean exists(String clientId, String roomId) {
         if (gameStates.containsKey(roomId)) {
             return gameStates.get(roomId)
                              .getPlayers()
                              .stream()
-                             .anyMatch(player -> player.getUsername()
-                                                       .equals(username));
+                             .anyMatch(player -> player.getClientId()
+                                                       .equals(clientId));
         }
         return false;
     }
@@ -102,43 +112,24 @@ public class GameStateService {
         return true;
     }
 
-    public boolean addPlayerInRoom(String username, String roomId) {
-        Player player = initializePlayers(List.of(username)).getFirst();
+    public boolean addPlayerInRoom(PlayerMetadata metadata, String roomId) {
+        Player player = initializePlayers(List.of(metadata)).getFirst();
         if (hasEmptySlot(roomId)) {
             gameStates.get(roomId).addPlayer(player);
+            gameStates.get(roomId).getTurnOrder().addLast(player);
             return true;
         }
         return false;
     }
 
-    public String getOpponentId(String roomId, String playerId) {
-        GameState gameState = gameStates.get(roomId);
-        return gameState.getPlayers()
-                        .stream()
-                        .filter(player -> !playerId.equals(player.getUsername()))
-                        .findFirst()
-                        .orElseThrow(IllegalStateException::new)
-                        .getUsername();
+    public String getUsernameFromId(String clientId, String roomId) {
+        return gameStates.get(roomId)
+                .getPlayer(clientId).getUsername();
     }
 
-    public Position getPlayerPosition(String roomId, String username, int position) {
-        return gameStates.get(roomId)
-                         .getPlayers()
-                         .stream()
-                         .filter(player -> player.getUsername()
-                                                 .equals(username))
-                         .findFirst()
-                         .orElseThrow(IllegalStateException::new)
-                         .getPositions()[position];
-    }
-
-    public Player getPlayer(String roomId, String username) {
-        return gameStates.get(roomId)
-                         .getPlayers()
-                         .stream()
-                         .filter(player -> player.getUsername()
-                                                 .equals(username))
-                         .findFirst()
-                         .orElseThrow(IllegalStateException::new);
+    @Builder
+    public static class PlayerMetadata {
+        private String username;
+        private String clientId;
     }
 }
