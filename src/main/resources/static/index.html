@@ -100,8 +100,8 @@
             <div class="flex flex-wrap gap-2 ml-2 md:ml-4">
                 <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Load Mock State</button>
 
-                <button onclick="sendActionPayload('EVOLVE', null, null, null, null, 'FIGHTER')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Evolve</button>
-                <button onclick="sendActionPayload('ATTACK_AND_CAPTURE', 1, null, 'opponentMock', null)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Attack</button>
+                <button onclick="sendActionPayload('PROMOTE', null, null, null, null, 'VETERAN')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Promote</button>
+                <button onclick="sendActionPayload('CAPTURE', 1, null, 'opponentMock', null)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Capture</button>
                 <button onclick="testSendPosition()" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Position</button>
 
                 <button id="btn-guide" onclick="toggleGuide()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-all duration-300 shadow-sm ml-2">Guide: OFF</button>
@@ -216,9 +216,9 @@
 
     // Transient Targeting Flags
     let isWildcardSelecting = false;
-    let isKamikazeSelecting = false;
-    let isAttackSelecting = false;
-    let isBlackOutSelecting = false; // NEW FLAG FOR PHANTOM
+    let isRevertSelecting = false;
+    let isCaptureSelecting = false;
+    let isBlackOutSelecting = false;
 
     /**
      * 1. INITIALIZATION ON LOAD
@@ -351,8 +351,8 @@
         try {
             // 1. Wipe targeting flags
             isWildcardSelecting = false;
-            isKamikazeSelecting = false;
-            isAttackSelecting = false;
+            isRevertSelecting = false;
+            isCaptureSelecting = false;
             isBlackOutSelecting = false;
 
             // 2. Update HUD
@@ -433,12 +433,12 @@
                     specificClasses = "bg-red-500/5 border-red-500/30 hover:border-red-500/80 hover:-translate-y-0.5";
                     innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">X</span>`;
                 } else if (posData.actor && posData.actor.currentState) {
-                    if (posData.actor.currentState === "NOVICE") {
+                    if (posData.actor.currentState === "RECRUIT") {
                         specificClasses = "bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/80 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:-translate-y-0.5 hover:scale-[1.02]";
-                        innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]">N</span>`;
-                    } else if (posData.actor.currentState === "FIGHTER") {
+                        innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]">R</span>`;
+                    } else if (posData.actor.currentState === "VETERAN") {
                         specificClasses = "bg-amber-500/5 border-amber-500/30 hover:border-amber-500/80 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:-translate-y-0.5 hover:scale-[1.02]";
-                        innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">F</span>`;
+                        innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">V</span>`;
                     } else if (posData.actor.currentState === "PHANTOM") {
                         specificClasses = "bg-purple-500/5 border-purple-500/30 hover:border-purple-500/80 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:-translate-y-0.5 hover:scale-[1.02]";
                         innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]">P</span>`;
@@ -491,25 +491,25 @@
         }
 
         // 2. Revert Targeting
-        else if (isKamikazeSelecting) {
+        else if (isRevertSelecting) {
             if (gridId === 'p1') {
                 if (posId === globalGameState.actionPendingOn) {
-                    showToast("error", "Cannot Kamikaze the active unit.");
+                    showToast("error", "Cannot Revert the active unit.");
                     return;
                 }
-                sendActionPayload('KAMIKAZE', null, posId, null, myName);
+                sendActionPayload('REVERT', null, posId, null, myName);
             }
             else if (gridId === 'p2') {
-                sendActionPayload('KAMIKAZE', posId, null, opponentName, null);
+                sendActionPayload('REVERT', posId, null, opponentName, null);
             }
         }
 
-        // 3. Attack Targeting
-        else if (isAttackSelecting && gridId === 'p2') {
+        // 3. Capture Targeting
+        else if (isCaptureSelecting && gridId === 'p2') {
             const pos = opponent.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
-                sendActionPayload('ATTACK_AND_CAPTURE', posId, null, opponentName, null);
+                sendActionPayload('CAPTURE', posId, null, opponentName, null);
             }
         }
 
@@ -707,17 +707,17 @@
             <p class="text-[11px] text-zinc-400 mb-4">${actorType} selected.</p>
             <div class="grid grid-cols-2 gap-3 w-full px-2">`;
 
-        if (actorType === "NOVICE") {
-            updateGuide("Novice Selected: Evolve to a Fighter or Phantom, or trigger a Kamikaze! 💥 Kamikaze sacrifices your Novice to rewind the target's timeline. Example: A tile went Novice ➔ Fighter ➔ Captured. Kamikaze blasts away 'Captured', reverting it to a Fighter! Hit it again, and the Fighter devolves back to Novice. The state you blow up is gone forever. Great for liberating your captured bases or demoting enemy Fighters. Handle with care! ⚠️");
+        if (actorType === "RECRUIT") {
+            updateGuide("Recruit Selected: Promote to a Veteran or Phantom, or trigger a Revert! 💥 Revert sacrifices your Recruit to rewind the target's timeline. Example: A tile went Recruit ➔ Veteran ➔ Captured. Revert blasts away 'Captured', reverting it to a Veteran! Hit it again, and the Veteran devolves back to Recruit. The state you blow up is gone forever. Great for liberating your captured bases or demoting enemy Veterans. Handle with care! ⚠️");
             html += `
-                <button onclick="showEvolveOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Evolve</button>
-                <button onclick="triggerKamikazeSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Kamikaze</button>
+                <button onclick="showPromoteOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Promote</button>
+                <button onclick="triggerRevertSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Revert</button>
             `;
         }
-        else if (actorType === "FIGHTER") {
-            updateGuide("Fighter Selected: Target an uncaptured enemy position to capture it. Initiating an attack grants you an immediate bonus roll.");
+        else if (actorType === "VETERAN") {
+            updateGuide("Veteran Selected: Target an uncaptured enemy position to capture it. Initiating an attack grants you an immediate bonus roll.");
             html += `
-                <button onclick="triggerAttackSelection()" class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Attack</button>`;
+                <button onclick="triggerCaptureSelection()" class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Capture</button>`;
         }
         else if (actorType === "PHANTOM") {
             updateGuide("Phantom Selected: Perform a BlackOut on an enemy position. Selecting an enemy actor will destroy your Phantom and eliminate all matching enemy unit types across their board.");
@@ -733,25 +733,25 @@
         actionArea.innerHTML = html;
     }
 
-    function showEvolveOptions() {
+    function showPromoteOptions() {
         const actionArea = document.getElementById('dynamic-action-area');
         actionArea.innerHTML = `
             <h3 class="text-amber-400 font-semibold mb-2 text-sm uppercase tracking-wide">Select Specialization</h3>
-            <p class="text-[11px] text-zinc-400 mb-4">Choose the evolutionary path for your Novice.</p>
+            <p class="text-[11px] text-zinc-400 mb-4">Choose the evolutionary path for your Recruit.</p>
             <div class="grid grid-cols-2 gap-3 w-full px-2">
-                <button onclick="sendActionPayload('EVOLVE', null, null, null, null, 'FIGHTER')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Fighter</button>
-                <button onclick="sendActionPayload('EVOLVE', null, null, null, null, 'PHANTOM')" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Phantom</button>
-                <button onclick="renderActionUI('NOVICE')" class="col-span-2 mt-2 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
+                <button onclick="sendActionPayload('PROMOTE', null, null, null, null, 'VETERAN')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Veteran</button>
+                <button onclick="sendActionPayload('PROMOTE', null, null, null, null, 'PHANTOM')" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Phantom</button>
+                <button onclick="renderActionUI('RECRUIT')" class="col-span-2 mt-2 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
             </div>
         `;
-        updateGuide("Select FIGHTER for offensive capture capabilities, or PHANTOM for the tactical BlackOut action.");
+        updateGuide("Select VETERAN for offensive capture capabilities, or PHANTOM for the tactical BlackOut action.");
     }
 
-    function triggerKamikazeSelection() {
-        isKamikazeSelecting = true;
-        isAttackSelecting = false;
+    function triggerRevertSelection() {
+        isRevertSelecting = true;
+        isCaptureSelecting = false;
         isBlackOutSelecting = false;
-        updateGuide("KAMIKAZE active. Click an enemy position (Destination) OR your own position (Source) to strike. You cannot target the active unit.");
+        updateGuide("REVERT active. Click an enemy position (Destination) OR your own position (Source) to strike. You cannot target the active unit.");
 
         document.getElementById('dynamic-action-area').innerHTML = `
             <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
@@ -778,11 +778,11 @@
         }
     }
 
-    function triggerAttackSelection() {
-        isAttackSelecting = true;
-        isKamikazeSelecting = false;
+    function triggerCaptureSelection() {
+        isCaptureSelecting = true;
+        isRevertSelecting = false;
         isBlackOutSelecting = false;
-        updateGuide("ATTACK active. Click an UNCAPTURED enemy position to capture it.");
+        updateGuide("CAPTURE active. Click an UNCAPTURED enemy position to capture it.");
 
         document.getElementById('dynamic-action-area').innerHTML = `
             <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
@@ -812,8 +812,8 @@
 
     function triggerBlackOutSelection() {
         isBlackOutSelecting = true;
-        isKamikazeSelecting = false;
-        isAttackSelecting = false;
+        isRevertSelecting = false;
+        isCaptureSelecting = false;
         updateGuide("BLACKOUT active. Click an enemy position holding an actor to execute sequence.");
 
         document.getElementById('dynamic-action-area').innerHTML = `
@@ -853,8 +853,8 @@
         if (spec !== null) payload.specialization = spec;
 
         // Wipe targeting flags
-        isKamikazeSelecting = false;
-        isAttackSelecting = false;
+        isRevertSelecting = false;
+        isCaptureSelecting = false;
         isBlackOutSelecting = false;
 
         ws.send(JSON.stringify({ type: "ACTION", payload: payload }));
@@ -997,7 +997,7 @@
     function injectDummyData() {
         if(!IdentityManager.get()) IdentityManager.set("son");
 
-        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"NOVICE","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
+        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"RECRUIT","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"RECRUIT"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"RECRUIT"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
 
         globalGameState = dummyPayload;
         updateGameState(dummyPayload);
