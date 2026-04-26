@@ -100,8 +100,8 @@
             <div class="flex flex-wrap gap-2 ml-2 md:ml-4">
                 <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Load Mock State</button>
 
-                <button onclick="sendActionPayload('EVOLVE')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Evolve</button>
-                <button onclick="sendActionPayload('ATTACK_AND_CAPTURE', 1)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Attack</button>
+                <button onclick="sendActionPayload('EVOLVE', null, null, null, null, 'FIGHTER')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Evolve</button>
+                <button onclick="sendActionPayload('ATTACK_AND_CAPTURE', 1, null, 'opponentMock', null)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Attack</button>
                 <button onclick="testSendPosition()" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Position</button>
 
                 <button id="btn-guide" onclick="toggleGuide()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-all duration-300 shadow-sm ml-2">Guide: OFF</button>
@@ -193,15 +193,15 @@
 <script>
     // Global State Variables
     let ws;
-    let isGuideEnabled = false; // Default is now OFF
-    let guideIdleTimer = null;  // Timer for the Idle Nudge feature
+    let isGuideEnabled = false;
+    let guideIdleTimer = null;
 
-    // SECURE IDENTITY MANAGER (Replaces global myUsername)
+    // SECURE IDENTITY MANAGER
     const IdentityManager = (() => {
         let _username = "";
         return {
             set: (name) => {
-                if (!_username) _username = name; // Write-once lock
+                if (!_username) _username = name;
             },
             get: () => _username
         };
@@ -218,6 +218,7 @@
     let isWildcardSelecting = false;
     let isKamikazeSelecting = false;
     let isAttackSelecting = false;
+    let isBlackOutSelecting = false; // NEW FLAG FOR PHANTOM
 
     /**
      * 1. INITIALIZATION ON LOAD
@@ -253,7 +254,6 @@
             return;
         }
 
-        // Lock in identity
         IdentityManager.set(user);
 
         let wsHost = window.location.host;
@@ -327,19 +327,13 @@
     // ========================================================
 
     function manageGuideIdleNudge() {
-        // Clear any existing timer so it resets
         clearTimeout(guideIdleTimer);
 
         const btn = document.getElementById('btn-guide');
-        // Instantly remove glow if state changes or user makes a move
         btn.classList.remove('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
 
-        // We only want to nudge if the guide is OFF, and it is the USER'S turn.
         if (!isGuideEnabled && globalGameState && globalGameState.currentPlayerId === IdentityManager.get()) {
-
-            // Set timer for 10 seconds of inactivity
             guideIdleTimer = setTimeout(() => {
-                // Double check it's still off and still our turn just in case
                 if (!isGuideEnabled && globalGameState.currentPlayerId === IdentityManager.get()) {
                     btn.classList.add('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
                     showToast("info", "Commander, tactical guide is available if you need assistance.");
@@ -355,10 +349,11 @@
 
     function updateGameState(gameState) {
         try {
-            // 1. Wipe targeting flags, ensuring clean slate on fresh renders
+            // 1. Wipe targeting flags
             isWildcardSelecting = false;
             isKamikazeSelecting = false;
             isAttackSelecting = false;
+            isBlackOutSelecting = false;
 
             // 2. Update HUD
             document.getElementById('hud-mode').innerText = gameState.gameMode ? gameState.gameMode.replace('_', ' ') : '???';
@@ -413,7 +408,6 @@
                 }
             }
 
-            // Reset the Idle Nudge Timer every time the game state updates
             manageGuideIdleNudge();
 
         } catch (e) {
@@ -445,6 +439,9 @@
                     } else if (posData.actor.currentState === "FIGHTER") {
                         specificClasses = "bg-amber-500/5 border-amber-500/30 hover:border-amber-500/80 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:-translate-y-0.5 hover:scale-[1.02]";
                         innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">F</span>`;
+                    } else if (posData.actor.currentState === "PHANTOM") {
+                        specificClasses = "bg-purple-500/5 border-purple-500/30 hover:border-purple-500/80 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:-translate-y-0.5 hover:scale-[1.02]";
+                        innerHtml += `<span class="font-mono text-xl md:text-2xl font-bold text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]">P</span>`;
                     }
                 }
             }
@@ -472,10 +469,15 @@
     // ========================================================
 
     function handleBoxClick(gridId, posId) {
+        if (!globalGameState) return;
+
+        const myName = IdentityManager.get();
+        const opponent = globalGameState.players.find(p => p.username !== myName);
+        const opponentName = opponent ? opponent.username : null;
 
         // 1. Wildcard
         if (isWildcardSelecting && gridId === 'p1') {
-            const p1 = globalGameState.players.find(p => p.username === IdentityManager.get());
+            const p1 = globalGameState.players.find(p => p.username === myName);
             const pos = p1.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
@@ -495,20 +497,30 @@
                     showToast("error", "Cannot Kamikaze the active unit.");
                     return;
                 }
-                sendActionPayload('KAMIKAZE', null, posId);
+                sendActionPayload('KAMIKAZE', null, posId, null, myName);
             }
             else if (gridId === 'p2') {
-                sendActionPayload('KAMIKAZE', posId, null);
+                sendActionPayload('KAMIKAZE', posId, null, opponentName, null);
             }
         }
 
         // 3. Attack Targeting
         else if (isAttackSelecting && gridId === 'p2') {
-            const p2 = globalGameState.players.find(p => p.username !== IdentityManager.get());
-            const pos = p2.positions.find(p => p.positionId === posId);
+            const pos = opponent.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
-                sendActionPayload('ATTACK_AND_CAPTURE', posId);
+                sendActionPayload('ATTACK_AND_CAPTURE', posId, null, opponentName, null);
+            }
+        }
+
+        // 4. BlackOut Targeting (PHANTOM)
+        else if (isBlackOutSelecting && gridId === 'p2') {
+            const pos = opponent.positions.find(p => p.positionId === posId);
+
+            if (pos && !pos.capturedByOpponent && pos.actor) {
+                sendActionPayload('BLACKOUT', posId, null, opponentName, null);
+            } else {
+                showToast("error", "BlackOut requires targeting an active enemy actor.");
             }
         }
     }
@@ -568,8 +580,6 @@
 
     function executeRollAnimation(finalVal1, finalVal2, isWildcard) {
         isAnimatingRoll = true;
-
-        // Clear the Nudge Timer so it doesn't trigger while the dice are spinning
         clearTimeout(guideIdleTimer);
 
         const d1 = document.getElementById('die-1');
@@ -646,7 +656,6 @@
                         }
                     }
 
-                    // Restart Nudge timer now that the turn/action is ready
                     manageGuideIdleNudge();
 
                 }, 1000);
@@ -699,9 +708,9 @@
             <div class="grid grid-cols-2 gap-3 w-full px-2">`;
 
         if (actorType === "NOVICE") {
-            updateGuide("Novice Selected: Evolve to a Fighter, or trigger a Kamikaze! 💥 Kamikaze sacrifices your Novice to rewind the target's timeline. Example: A tile went Novice ➔ Fighter ➔ Captured. Kamikaze blasts away 'Captured', reverting it to a Fighter! Hit it again, and the Fighter devolves back to Novice. The state you blow up is gone forever. Great for liberating your captured bases or demoting enemy Fighters. Handle with care! ⚠️");
+            updateGuide("Novice Selected: Evolve to a Fighter or Phantom, or trigger a Kamikaze! 💥 Kamikaze sacrifices your Novice to rewind the target's timeline. Example: A tile went Novice ➔ Fighter ➔ Captured. Kamikaze blasts away 'Captured', reverting it to a Fighter! Hit it again, and the Fighter devolves back to Novice. The state you blow up is gone forever. Great for liberating your captured bases or demoting enemy Fighters. Handle with care! ⚠️");
             html += `
-                <button onclick="sendActionPayload('EVOLVE')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Evolve</button>
+                <button onclick="showEvolveOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Evolve</button>
                 <button onclick="triggerKamikazeSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Kamikaze</button>
             `;
         }
@@ -709,6 +718,11 @@
             updateGuide("Fighter Selected: Target an uncaptured enemy position to capture it. Initiating an attack grants you an immediate bonus roll.");
             html += `
                 <button onclick="triggerAttackSelection()" class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Attack</button>`;
+        }
+        else if (actorType === "PHANTOM") {
+            updateGuide("Phantom Selected: Perform a BlackOut on an enemy position. Selecting an enemy actor will destroy your Phantom and eliminate all matching enemy unit types across their board.");
+            html += `
+                <button onclick="triggerBlackOutSelection()" class="col-span-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">BlackOut</button>`;
         }
         else {
             updateGuide(`Tactical Action required for your ${actorType}. Choose your strategy carefully.`);
@@ -719,9 +733,24 @@
         actionArea.innerHTML = html;
     }
 
+    function showEvolveOptions() {
+        const actionArea = document.getElementById('dynamic-action-area');
+        actionArea.innerHTML = `
+            <h3 class="text-amber-400 font-semibold mb-2 text-sm uppercase tracking-wide">Select Specialization</h3>
+            <p class="text-[11px] text-zinc-400 mb-4">Choose the evolutionary path for your Novice.</p>
+            <div class="grid grid-cols-2 gap-3 w-full px-2">
+                <button onclick="sendActionPayload('EVOLVE', null, null, null, null, 'FIGHTER')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Fighter</button>
+                <button onclick="sendActionPayload('EVOLVE', null, null, null, null, 'PHANTOM')" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Phantom</button>
+                <button onclick="renderActionUI('NOVICE')" class="col-span-2 mt-2 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
+            </div>
+        `;
+        updateGuide("Select FIGHTER for offensive capture capabilities, or PHANTOM for the tactical BlackOut action.");
+    }
+
     function triggerKamikazeSelection() {
         isKamikazeSelecting = true;
         isAttackSelecting = false;
+        isBlackOutSelecting = false;
         updateGuide("KAMIKAZE active. Click an enemy position (Destination) OR your own position (Source) to strike. You cannot target the active unit.");
 
         document.getElementById('dynamic-action-area').innerHTML = `
@@ -752,6 +781,7 @@
     function triggerAttackSelection() {
         isAttackSelecting = true;
         isKamikazeSelecting = false;
+        isBlackOutSelecting = false;
         updateGuide("ATTACK active. Click an UNCAPTURED enemy position to capture it.");
 
         document.getElementById('dynamic-action-area').innerHTML = `
@@ -780,26 +810,52 @@
         }
     }
 
-    function sendActionPayload(actionType, targetPosId = null, sourcePosId = null) {
-        let payload = { gameAction: actionType };
-
-        if (actionType === "ATTACK_AND_CAPTURE") {
-            if (!targetPosId) return;
-            payload.destinationPosition = targetPosId;
-        }
-
-        if (actionType === "KAMIKAZE") {
-            if (targetPosId) payload.destinationPosition = targetPosId;
-            if (sourcePosId) payload.sourcePosition = sourcePosId;
-        }
-
-        if (actionType === "EVOLVE") {
-            payload.specialization = "FIGHTER";
-        }
-
-        // Wipe flags to prevent accidental double clicks before server resolves
+    function triggerBlackOutSelection() {
+        isBlackOutSelecting = true;
         isKamikazeSelecting = false;
         isAttackSelecting = false;
+        updateGuide("BLACKOUT active. Click an enemy position holding an actor to execute sequence.");
+
+        document.getElementById('dynamic-action-area').innerHTML = `
+            <h3 class="text-purple-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
+            <p class="text-[10px] text-zinc-400">Click a pulsing purple box on the enemy board.</p>
+            <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
+        `;
+
+        const p2 = globalGameState.players.find(p => p.username !== IdentityManager.get());
+        for(let i=1; i<=10; i++) {
+            const p1Box = document.getElementById(`p1-box-${i}`);
+            if (p1Box) {
+                p1Box.classList.add('cursor-not-allowed', 'opacity-50');
+            }
+
+            const p2Box = document.getElementById(`p2-box-${i}`);
+            if (p2Box) {
+                const pos = p2.positions.find(p => p.positionId === i);
+                if (pos && !pos.capturedByOpponent && pos.actor) {
+                    p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                    p2Box.classList.add('ring-2', 'ring-purple-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(168,85,247,0.4)]', 'cursor-crosshair', 'border-purple-500');
+                } else {
+                    p2Box.classList.add('cursor-not-allowed', 'opacity-50');
+                }
+            }
+        }
+    }
+
+    // THE UPDATED ACTION PAYLOAD GENERATOR
+    function sendActionPayload(actionType, targetPosId = null, sourcePosId = null, targetHolder = null, sourceHolder = null, spec = null) {
+        let payload = { gameAction: actionType };
+
+        if (targetPosId !== null) payload.destinationPosition = targetPosId;
+        if (sourcePosId !== null) payload.sourcePosition = sourcePosId;
+        if (targetHolder !== null) payload.destinationPositionHolder = targetHolder;
+        if (sourceHolder !== null) payload.sourcePositionHolder = sourceHolder;
+        if (spec !== null) payload.specialization = spec;
+
+        // Wipe targeting flags
+        isKamikazeSelecting = false;
+        isAttackSelecting = false;
+        isBlackOutSelecting = false;
 
         ws.send(JSON.stringify({ type: "ACTION", payload: payload }));
 
@@ -835,7 +891,6 @@
     function showToast(type, text) {
         const container = document.getElementById('toast-container');
 
-        // Enforce max 3 toasts rule
         if (container.children.length >= 3) {
             container.removeChild(container.firstChild);
         }
@@ -864,12 +919,10 @@
 
         container.appendChild(toast);
 
-        // Animate in
         requestAnimationFrame(() => {
             toast.classList.remove('-translate-y-4', 'opacity-0');
         });
 
-        // Remove after 3 seconds
         setTimeout(() => {
             toast.classList.add('opacity-0', '-translate-y-2');
             setTimeout(() => {
@@ -913,7 +966,6 @@
         const btn = document.getElementById('btn-guide');
         const panel = document.getElementById('guide-panel');
 
-        // Immediately clear glow
         btn.classList.remove('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
 
         if (isGuideEnabled) {
@@ -925,7 +977,6 @@
             btn.innerText = "Guide: OFF";
             btn.className = "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2";
             panel.style.display = 'none';
-            // Resume idle checking if it's our turn
             if (globalGameState) manageGuideIdleNudge();
         }
     }
@@ -946,14 +997,13 @@
     function injectDummyData() {
         if(!IdentityManager.get()) IdentityManager.set("son");
 
-        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"NOVICE","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"FIGHTER"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
+        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"NOVICE","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"NOVICE"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"NOVICE"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
 
         globalGameState = dummyPayload;
         updateGameState(dummyPayload);
         showToast("info", "Test State JSON Loaded.");
     }
 
-    // NEW FUNCTION: Added to handle sending an arbitrary position payload via WebSocket
     function testSendPosition() {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             showToast("error", "Cannot send position payload: WebSocket offline.");
@@ -961,7 +1011,6 @@
             return;
         }
 
-        // Arbitrary test position: 1. You can adjust this as needed for testing.
         const testPos = 1;
         ws.send(JSON.stringify({ type: "POSITION", payload: { position: testPos } }));
         showToast("info", `Debug: Raw Position payload sent (Pos: ${testPos}).`);

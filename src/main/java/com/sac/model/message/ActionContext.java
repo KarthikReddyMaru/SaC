@@ -12,6 +12,7 @@ public class ActionContext {
     private GameAction gameAction;
     private Integer sourcePosition; // Only for kamikaze for now
     private Integer destinationPosition;
+    private String sourcePositionHolder;
     private String destinationPositionHolder;
     private Specialization specialization;
 
