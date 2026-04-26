@@ -12,8 +12,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static com.sac.model.GameState.GameplayStatus;
+import static com.sac.model.GameState.State.ROLL;
 
 @Slf4j
 @Service
@@ -24,7 +26,8 @@ public class GameStateService {
     @Value("${player.total_positions}")
     private int playerPositions;
 
-    public GameState initializeGameState(String roomId, List<String> players, GameMode gameMode) {
+    public void initializeGameState(String roomId, List<String> players,
+                                    GameMode gameMode, Integer totalPlayers) {
         if (!gameStates.containsKey(roomId)) {
             GameState gameState = GameState
                     .builder()
@@ -35,34 +38,33 @@ public class GameStateService {
                     .actionPendingOn(null)
                     .actionPendingOnActor(null)
                     .gameplayStatus(GameplayStatus.PLAYING)
-                    .state(null)
+                    .state(ROLL)
                     .gameMode(gameMode)
                     .positionSelection(PositionSelection.ROLL)
-                    .playerCount(players.size())
+                    .playerCount(totalPlayers)
                     .winner(null)
                     .totalMovesPlayed(0)
                     .totalAvailableMoves(Integer.MAX_VALUE)
                     .build();
             gameStates.put(roomId, gameState);
-            return gameState;
         }
-        return null;
     }
 
     private List<Player> initializePlayers(List<String> players) {
         return players.stream()
-                .map(username -> {
-                    Position[] positions = new Position[playerPositions + 1];
-                    for (int i = 0; i <= playerPositions; i++) {
-                        positions[i] = Position.builder()
-                                .positionId(i)
-                                .actor(null)
-                                .belongsTo(username)
-                                .isCapturedByOpponent(false)
-                                .build();
-                    }
-                    return new Player(positions, username, 0);
-                }).toList();
+                      .map(username -> {
+                          Position[] positions = new Position[playerPositions + 1];
+                          for (int i = 0; i <= playerPositions; i++) {
+                              positions[i] = Position.builder()
+                                                     .positionId(i)
+                                                     .actor(null)
+                                                     .belongsTo(username)
+                                                     .isCapturedByOpponent(false)
+                                                     .build();
+                          }
+                          return new Player(positions, username, 0);
+                      })
+                      .collect(Collectors.toList());
     }
 
     public GameState getGameState(String roomId) {
@@ -71,7 +73,7 @@ public class GameStateService {
         return gameStates.getOrDefault(roomId, null);
     }
 
-    public void endGameState(String roomId) {
+    public void removeGameState(String roomId) {
         gameStates.remove(roomId);
     }
 
@@ -79,32 +81,64 @@ public class GameStateService {
         return gameStates.containsKey(roomId);
     }
 
+    public boolean exists(String username, String roomId) {
+        if (gameStates.containsKey(roomId)) {
+            return gameStates.get(roomId)
+                             .getPlayers()
+                             .stream()
+                             .anyMatch(player -> player.getUsername()
+                                                       .equals(username));
+        }
+        return false;
+    }
+
+    public boolean hasEmptySlot(String roomId) {
+        if (gameStates.containsKey(roomId)) {
+            return gameStates.get(roomId)
+                             .getPlayers()
+                             .size() < gameStates.get(roomId)
+                                                  .getPlayerCount();
+        }
+        return true;
+    }
+
+    public boolean addPlayerInRoom(String username, String roomId) {
+        Player player = initializePlayers(List.of(username)).getFirst();
+        if (hasEmptySlot(roomId)) {
+            gameStates.get(roomId).addPlayer(player);
+            return true;
+        }
+        return false;
+    }
+
     public String getOpponentId(String roomId, String playerId) {
         GameState gameState = gameStates.get(roomId);
         return gameState.getPlayers()
-                .stream()
-                .filter(player -> !playerId.equals(player.getUsername()))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new)
-                .getUsername();
+                        .stream()
+                        .filter(player -> !playerId.equals(player.getUsername()))
+                        .findFirst()
+                        .orElseThrow(IllegalStateException::new)
+                        .getUsername();
     }
 
     public Position getPlayerPosition(String roomId, String username, int position) {
         return gameStates.get(roomId)
-                .getPlayers()
-                .stream()
-                .filter(player -> player.getUsername().equals(username))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new)
-                .getPositions()[position];
+                         .getPlayers()
+                         .stream()
+                         .filter(player -> player.getUsername()
+                                                 .equals(username))
+                         .findFirst()
+                         .orElseThrow(IllegalStateException::new)
+                         .getPositions()[position];
     }
 
     public Player getPlayer(String roomId, String username) {
         return gameStates.get(roomId)
-                .getPlayers()
-                .stream()
-                .filter(player -> player.getUsername().equals(username))
-                .findFirst()
-                .orElseThrow(IllegalStateException::new);
+                         .getPlayers()
+                         .stream()
+                         .filter(player -> player.getUsername()
+                                                 .equals(username))
+                         .findFirst()
+                         .orElseThrow(IllegalStateException::new);
     }
 }
