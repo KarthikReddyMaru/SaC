@@ -1,14 +1,14 @@
 package com.sac.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sac.model.actor.Specialization;
 import com.sac.strategy.position.PositionSelection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Deque;
 import java.util.List;
-
-import static com.sac.model.GameState.GameplayStatus.FINISHED;
 
 @Data
 @Builder(toBuilder = true)
@@ -43,6 +43,7 @@ public class GameState {
     public static class Player {
         private Position[] positions;
         private String username;
+        private String clientId;
         private int points;
 
         public void addPoints(int points) {
@@ -50,43 +51,36 @@ public class GameState {
         }
     }
 
+    @JsonIgnore
+    private Deque<Player> turnOrder;
+
     public void addPlayer(Player player) {
         this.players.add(player);
     }
 
-    public Player getPlayer(String username) {
+    public Player getPlayer(String clientId) {
         return this.players.stream()
-                           .filter(player -> player.getUsername().equals(username))
+                           .filter(player -> player.getClientId().equals(clientId))
                            .findFirst()
                            .orElseThrow();
     }
 
-    public Position getPlayerPosition(String username, int position) {
+    public Position getPlayerPosition(String clientId, int position) {
         return this.getPlayers()
                    .stream()
-                   .filter(player -> player.getUsername()
-                                           .equals(username))
+                   .filter(player -> player.getClientId()
+                                           .equals(clientId))
                    .findFirst()
                    .orElseThrow(IllegalStateException::new)
                    .getPositions()[position];
     }
 
-    public Position getOpponentPosition(String username, int position) {
-        return this.getPlayers()
-                   .stream()
-                   .filter(player -> !player.getUsername()
-                                            .equals(username))
-                   .findFirst()
-                   .orElseThrow(IllegalStateException::new)
-                   .getPositions()[position];
-    }
-
-    public Player getOpponent(String username) {
-        return this.getPlayers()
-                   .stream()
-                   .filter(player -> !player.getUsername()
-                                            .equals(username))
-                   .findFirst()
-                   .orElseThrow(IllegalStateException::new);
+    public Player cycleNextPlayer() {
+        if (turnOrder == null || turnOrder.isEmpty()) {
+            throw new IllegalStateException("Cannot get next player: turn order is empty.");
+        }
+        Player nextPlayer = turnOrder.pollFirst();
+        this.turnOrder.addLast(nextPlayer);
+        return nextPlayer;
     }
 }
