@@ -13,10 +13,8 @@ public final class ActorEvolutionConfig {
 
     static {
         evolutions.put(Specialization.NOVICE,
-                Set.of(Specialization.FIGHTER, Specialization.PHANTOM, Specialization.HEALER));
+                Set.of(Specialization.FIGHTER, Specialization.PHANTOM));
         evolutions.put(Specialization.FIGHTER,
-                Collections.emptySet());
-        evolutions.put(Specialization.HEALER,
                 Collections.emptySet());
         evolutions.put(Specialization.PHANTOM,
                 Collections.emptySet());

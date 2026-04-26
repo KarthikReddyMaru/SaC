@@ -5,8 +5,7 @@ import java.util.Arrays;
 public enum Specialization {
     NOVICE("Base actor", 1),
     FIGHTER("Can assault and seize a position in a single move", 2),
-    PHANTOM("Can wipe out a single type of actor from opposition board in one go", 2),
-    HEALER("Can revert one position to its previous state", 2);
+    PHANTOM("Can wipe out a single type of actor from opposition board in one go", 2);
 
     public final String description;
     public final int level;
