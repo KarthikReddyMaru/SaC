@@ -34,7 +34,7 @@ public class RoomConnectionService {
         return gameStateService.getGameState(roomId)
                                .getPlayers()
                                .stream()
-                               .map(GameState.Player::getUsername)
+                               .map(GameState.Player::getClientId)
                                .collect(Collectors.toUnmodifiableSet());
     }
 

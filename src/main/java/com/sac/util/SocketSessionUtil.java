@@ -22,6 +22,11 @@ public class SocketSessionUtil {
         return null;
     }
 
+    public static String getClientIdFromSession(WebSocketSession webSocketSession) {
+        String username = getQueryParamValue(webSocketSession, "clientId");
+        return username != null ? username : UUID.randomUUID().toString().substring(8);
+    }
+
     public static String getUserNameFromSession(WebSocketSession webSocketSession) {
         String username = getQueryParamValue(webSocketSession, "username");
         return username != null ? username : UUID.randomUUID().toString().substring(8);

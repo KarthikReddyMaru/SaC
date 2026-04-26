@@ -25,74 +25,64 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     public void visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
-        String opponent = gameState.getOpponent(username).getUsername();
 
-        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
+        ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
     public void visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
-        String opponent = gameState.getOpponent(username).getUsername();
 
-        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
-        pointsService.addPoints(roomId, username, spawn.pointsForSuccessfulAction());
+        ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
     public void visit(Revert revert, WebSocketSession webSocketSession, ActionContext actionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
-        String opponent = gameState.getOpponent(username).getUsername();
 
-        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
-        pointsService.addPoints(roomId, username, revert.pointsForSuccessfulAction());
+        ClassicPointsUtil.transitionRollToNextPlayer(gameState);
+        pointsService.addPoints(roomId, playerId, revert.pointsForSuccessfulAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
     public void visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
-        String opponent = gameState.getOpponent(username).getUsername();
 
-        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
-        pointsService.addPoints(roomId, username, promote.pointsForSuccessfulAction());
+        ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
     public void visit(Capture capture, WebSocketSession webSocketSession, ActionContext actionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
 
-        pointsService.addPoints(roomId, username, capture.pointsForSuccessfulAction());
-        ClassicPointsUtil.transitionRollToNextPlayer(username, gameState);
+        pointsService.addPoints(roomId, playerId, capture.pointsForSuccessfulAction());
+        ClassicPointsUtil.transitionRollToCurrentPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
     public void visit(BlackOut blackOut, WebSocketSession webSocketSession, ActionContext actionContext) {
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
-        String opponent = gameState.getOpponent(username).getUsername();
 
-        pointsService.addPoints(roomId, username, Integer.parseInt(actionContext.getAdditionalInfo()));
-        ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
+        pointsService.addPoints(roomId, playerId, Integer.parseInt(actionContext.getAdditionalInfo()));
+        ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 }

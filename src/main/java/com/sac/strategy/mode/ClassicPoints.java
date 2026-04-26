@@ -55,7 +55,7 @@ public class ClassicPoints implements Mode {
                                          .findFirst().orElse(null);
         if (winner != null) {
             gameState.setGameplayStatus(FINISHED);
-            return winner.getUsername();
+            return winner.getClientId();
         }
         return null;
     }

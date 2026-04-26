@@ -33,10 +33,10 @@ public class Promote implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         Specialization requestedTransition = actionContext.getSpecialization();
         GameState gameState = gameStateService.getGameState(roomId);
-        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
+        Position position = gameState.getPlayerPosition(playerId, gameState.getActionPendingOn());
         position.setActor(ActorFactory.getInstance(requestedTransition));
     }
 

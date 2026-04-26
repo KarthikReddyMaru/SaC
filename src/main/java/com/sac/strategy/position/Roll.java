@@ -1,6 +1,7 @@
 package com.sac.strategy.position;
 
 import com.sac.model.GameState;
+import com.sac.model.GameState.Player;
 import com.sac.model.Position;
 import com.sac.model.message.PositionContext;
 import com.sac.service.GameStateService;
@@ -14,9 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-
-import static com.sac.model.GameState.State.ACTION_REQUIRED;
-import static com.sac.model.GameState.State.ROLL;
 
 @Component
 @RequiredArgsConstructor
@@ -32,19 +30,19 @@ public class Roll implements PositionSelectionHandlerStrategy {
 
         GameState gameState = gameStateService.getGameState(roomId);
         String currentPlayer = gameState.getCurrentPlayerId();
-        String opponentPlayer = gameState.getOpponent(currentPlayer)
-                                         .getUsername();
         int positionId = message.getPosition();
         Position position = gameState.getPlayerPosition(currentPlayer, positionId);
 
         if (position.isCapturedByOpponent()) {
-            messageService.broadcastMessage(MessageFormat.capturedTrouble(opponentPlayer, positionId), roomId);
-            ClassicPointsUtil.transitionRollToNextPlayer(opponentPlayer, gameState);
+            String capturedPlayerId = position.getBelongsTo();
+            String capturedPlayerUsername = gameStateService.getUsernameFromId(capturedPlayerId, roomId);
+            messageService.broadcastMessage(MessageFormat.capturedTrouble(capturedPlayerUsername, positionId), roomId);
+            ClassicPointsUtil.transitionRollToNextPlayer(gameState);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (position.getActor() == null) {
             ClassicPointsUtil.requirePlayerAction(currentPlayer, gameState, positionId);
             spawn.performAction(webSocketSession, null, roomId);
-            ClassicPointsUtil.transitionRollToNextPlayer(opponentPlayer, gameState);
+            ClassicPointsUtil.transitionRollToNextPlayer(gameState);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else {
             ClassicPointsUtil.requirePlayerAction(currentPlayer, gameState, positionId);

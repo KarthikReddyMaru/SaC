@@ -30,11 +30,12 @@ public class Capture implements Action {
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
 
-        String playerUserName = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         Integer opponentPositionId = actionContext.getDestinationPosition();
-        String opponentUsername = gameStateService.getOpponentId(roomId, playerUserName);
-        Position opponentPosition = gameStateService.getPlayerPosition(roomId, opponentUsername, opponentPositionId);
-        opponentPosition.capturePosition(playerUserName);
+        String opponentId = actionContext.getDestinationPositionHolder();
+        Position opponentPosition = gameStateService.getGameState(roomId)
+                                                    .getPlayerPosition(opponentId, opponentPositionId);
+        opponentPosition.capturePosition(playerId);
 
     }
 

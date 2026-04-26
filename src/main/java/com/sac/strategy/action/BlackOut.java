@@ -32,7 +32,7 @@ public class BlackOut implements Action {
         GameState gameState = gameStateService.getGameState(roomId);
         Integer destinationPositionId = actionContext.getDestinationPosition();
         Integer sourcePositionId = gameState.getActionPendingOn();
-        String currentPlayerId = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String currentPlayerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String destinationPositionHolder = actionContext.getDestinationPositionHolder();
 
         Position destinationPosition = gameState.getPlayerPosition(destinationPositionHolder, destinationPositionId);

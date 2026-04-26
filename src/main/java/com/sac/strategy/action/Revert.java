@@ -34,20 +34,20 @@ public class Revert implements Action {
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
 
         GameState gameState = gameStateService.getGameState(roomId);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        Player opponent = gameState.getOpponent(username);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
+        String opponentPlayerId = actionContext.getDestinationPositionHolder();
 
         Integer destinationPositionToPerformAction = actionContext.getDestinationPosition();
         Integer sourcePositionToPerformAction = actionContext.getSourcePosition();
-        Integer actionPendingPosition = gameState.getActionPendingOn();
 
-        Position actionPerformingPosition = gameState.getPlayerPosition(username, actionPendingPosition);
+        Integer actionPendingPosition = gameState.getActionPendingOn();
+        Position actionPerformingPosition = gameState.getPlayerPosition(playerId, actionPendingPosition);
 
         actionPerformingPosition.setActor(null);
         if (sourcePositionToPerformAction != null) {
-            gameState.getPlayerPosition(username, sourcePositionToPerformAction).restorePosition();
+            gameState.getPlayerPosition(playerId, sourcePositionToPerformAction).restorePosition();
         } else {
-            opponent.getPositions()[destinationPositionToPerformAction].restorePosition();
+            gameState.getPlayerPosition(opponentPlayerId, destinationPositionToPerformAction).restorePosition();
         }
     }
 

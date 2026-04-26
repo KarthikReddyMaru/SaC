@@ -15,8 +15,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,7 +38,6 @@ public class RoomConnectionHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession webSocketSession, @NonNull TextMessage message) throws Exception {
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         MessageEnvelope messageEnvelope = objectMapper.readValue(message.asBytes(), MessageEnvelope.class);
         EnvelopeHandler envelopeHandler = envelopeHandlerRegistry.getInstance(messageEnvelope.getType());

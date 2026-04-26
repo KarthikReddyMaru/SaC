@@ -32,10 +32,10 @@ public class Spawn implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
         Integer playerPositionId = gameState.getActionPendingOn();
-        Position position = gameStateService.getPlayerPosition(roomId, username, playerPositionId);
+        Position position = gameState.getPlayerPosition(playerId, playerPositionId);
         Actor actor = ActorFactory.getInstance(Specialization.RECRUIT);
         position.setActor(actor);
     }

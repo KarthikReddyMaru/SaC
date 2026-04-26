@@ -30,26 +30,34 @@ public class GameplayService {
             return;
         }
 
+        String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        GameStateService.PlayerMetadata metadata = GameStateService.PlayerMetadata.builder()
+                                                                                  .clientId(clientId)
+                                                                                  .username(username)
+                                                                                  .build();
         GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
 
         if (!gameStateService.exists(roomId)) {
-            gameStateService.initializeGameState(roomId, List.of(username), gameMode, 2);
-            roomConnectionService.addPlayerToRegistry(username, webSocketSession);
+            gameStateService.initializeGameState(roomId, List.of(metadata), gameMode, 2);
+            roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
             log.info("{} is joined, Game initialized", username);
-        } else if (gameStateService.exists(username, roomId)) {
-            roomConnectionService.addPlayerToRegistry(username, webSocketSession);
+        } else if (gameStateService.exists(clientId, roomId)) {
+            roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.gameState(gameStateService.getGameState(roomId)));
             messageService.broadcastMessage(MessageFormat.playerReconnected(username), roomId);
             log.info("{} is re-joined", username);
         } else if (gameStateService.hasEmptySlot(roomId)) {
-            if (gameStateService.addPlayerInRoom(username, roomId)) {
-                roomConnectionService.addPlayerToRegistry(username, webSocketSession);
+            if (gameStateService.addPlayerInRoom(metadata, roomId)) {
+                roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
                 if (!gameStateService.hasEmptySlot(roomId)) {
+                    GameState gameState = gameStateService.getGameState(roomId);
+                    ClassicPointsUtil.transitionRollToNextPlayer(gameState);
                     messageService.broadcastMessage(
-                            MessageFormat.gameState(gameStateService.getGameState(roomId)), roomId);
+                            MessageFormat.gameState(gameState), roomId);
                     log.info("{} is joined, GameState is broadcasted", username);
+                    log.info("TurnOrder: {}", gameStateService.getGameState(roomId).getTurnOrder());
                 }
             }
         } else {
@@ -58,9 +66,10 @@ public class GameplayService {
     }
 
     public void tryLeave(WebSocketSession webSocketSession, String roomId) {
+        String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         log.info("{} disconnected", username);
-        roomConnectionService.removePlayerFromRegistry(username);
+        roomConnectionService.removePlayerFromRegistry(clientId);
         messageService.broadcastMessage(MessageFormat.playerDisconnected(username), roomId);
     }
 
@@ -73,7 +82,7 @@ public class GameplayService {
         Thread.sleep(100);
         gameState.getPlayers()
                  .stream()
-                 .map(GameState.Player::getUsername)
+                 .map(GameState.Player::getClientId)
                  .forEach(roomConnectionService::closePlayerSession);
         gameStateService.removeGameState(roomId);
         log.info("GameState - {}", gameStateService.getGameState(roomId));
