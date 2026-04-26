@@ -31,7 +31,7 @@ public class GameState {
     private int totalAvailableMoves;
 
     public enum GameplayStatus {
-        PLAYING, FINISHED
+        PLAYING, FINISHED, OFFLINE
     }
 
     public enum State {
@@ -48,6 +48,10 @@ public class GameState {
         public void addPoints(int points) {
             this.points += points;
         }
+    }
+
+    public void addPlayer(Player player) {
+        this.players.add(player);
     }
 
     public Player getPlayer(String username) {
