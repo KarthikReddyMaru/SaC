@@ -29,7 +29,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     @Override
     public boolean visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String username = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
 
@@ -46,7 +46,8 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                   .contains(drop.getActionType())) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.actorCannotPerform(
-                                                  sourcePosition.getActor().getCurrentState(),
+                                                  sourcePosition.getActor()
+                                                                .getCurrentState(),
                                                   drop.getActionType()));
             return false;
         }
@@ -58,14 +59,14 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     public boolean visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String username = SocketSessionUtil.getClientIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
 
         if (isActionIllegal(webSocketSession, username, gameState)) {
             return false;
         } else {
-            Actor actor = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn())
+            Actor actor = gameState.getPlayerPosition(username, gameState.getActionPendingOn())
                                           .getActor();
             if (actor != null) {
                 String errorMsg = "An actor already present in this position, choose different action";
@@ -77,9 +78,9 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     }
 
     @Override
-    public boolean visit(Revert revert, WebSocketSession webSocketSession, ActionContext context) {
+    public boolean visit(Revert revert, WebSocketSession webSocketSession, ActionContext actionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String username = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
@@ -91,17 +92,10 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Position position = gameState.getPlayerPosition(username, gameState.getActionPendingOn());
         Actor actor = position.getActor();
 
-        if (context.getDestinationPosition() == null && context.getSourcePosition() == null) {
+        if (!isValidSourcePosition(webSocketSession, actionContext, gameState) &&
+            isInvalidDestinationPosition(webSocketSession, actionContext, gameState)) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
             return false;
-        }
-
-        if ((context.getSourcePosition() != null &&
-             (context.getSourcePosition() < 1 || context.getSourcePosition() > maxPositionPerPlayer)) ||
-            (context.getDestinationPosition() != null &&
-             (context.getDestinationPosition() < 1 || context.getDestinationPosition() > maxPositionPerPlayer))) {
-            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
-
         }
 
         if (actor == null) {
@@ -109,12 +103,12 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                           MessageFormat.noActorPresent(gameState.getActionPendingOn()));
             return false;
         } else if (!actor.getAllowedActions()
-                         .contains(context.getGameAction())) {
+                         .contains(actionContext.getGameAction())) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.actorCannotPerform(actor.getCurrentState(),
-                                                                                             context.getGameAction()));
+                                                                                             actionContext.getGameAction()));
             return false;
-        } else if (context.getSourcePosition() != null && gameState.getActionPendingOn()
-                                                                   .equals(context.getSourcePosition())) {
+        } else if (actionContext.getSourcePosition() != null && gameState.getActionPendingOn()
+                                                                   .equals(actionContext.getSourcePosition())) {
             messageService.sendSystemMessage(webSocketSession, "You cannot perform Revert on the same position");
             return false;
         }
@@ -125,13 +119,13 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     public boolean visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         Specialization requestedTransition = actionContext.getSpecialization();
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (isActionIllegal(webSocketSession, username, gameState)) return false;
+        if (isActionIllegal(webSocketSession, clientId, gameState)) return false;
 
-        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
+        Position position = gameState.getPlayerPosition(clientId, gameState.getActionPendingOn());
         Actor actor = position.getActor();
 
         if (actor == null) {
@@ -144,7 +138,8 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         } else if (!actor.getAllowedTransitions()
                          .contains(requestedTransition) || actor.getCurrentState()
                                                                 .equals(requestedTransition)) {
-            String errorMessage = String.format("%s cannot PROMOTE to %s", actor.getCurrentState(), requestedTransition);
+            String errorMessage = String.format("%s cannot PROMOTE to %s", actor.getCurrentState(),
+                                                requestedTransition);
             messageService.sendSystemMessage(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
             return false;
         }
@@ -156,16 +151,19 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                          ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String username = SocketSessionUtil.getClientIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
         Integer playerPositionId = gameState.getActionPendingOn();
 
-        if (isActionIllegal(webSocketSession, username, gameState)) return false;
+        if (isActionIllegal(webSocketSession, username, gameState) ||
+            isInvalidDestinationPosition(webSocketSession, actionContext, gameState)) return false;
 
         Position playerPosition = gameState.getPlayerPosition(username, playerPositionId);
         Actor actor = playerPosition.getActor();
         Integer opponentPositionId = actionContext.getDestinationPosition();
+        String opponentId = actionContext.getDestinationPositionHolder();
+        Position opponentPosition = gameState.getPlayer(opponentId).getPositions()[opponentPositionId];
 
         if (actor == null) {
             messageService.sendRawPayload(webSocketSession,
@@ -177,13 +175,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                           MessageFormat.actorCannotPerform(actor.getCurrentState(),
                                                                            capture.getActionType()));
             return false;
-        } else if (opponentPositionId == null ||
-                   (actionContext.getDestinationPosition() < 1 ||
-                    actionContext.getDestinationPosition() > maxPositionPerPlayer)) {
-            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
-            return false;
-        } else if (gameState.getOpponentPosition(username, opponentPositionId)
-                            .isCapturedByOpponent()) {
+        } else if (opponentPosition.isCapturedByOpponent()) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.capturedTrouble(username, opponentPositionId));
             return false;
@@ -195,22 +187,15 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     public boolean visit(BlackOut blackOut, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
-        String currentPlayerId = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String currentPlayerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
 
-        if (isActionIllegal(webSocketSession, currentPlayerId, gameState)) return false;
+        if (isActionIllegal(webSocketSession, currentPlayerId, gameState) ||
+            isInvalidDestinationPosition(webSocketSession, actionContext, gameState)) return false;
 
         Integer destinationPositionId = actionContext.getDestinationPosition();
         String destinationPositionHolder = actionContext.getDestinationPositionHolder();
-        boolean isPlayerPresent = gameState.getPlayers()
-                                           .stream()
-                                           .anyMatch(player -> player.getUsername().equals(destinationPositionHolder));
-
-        if (destinationPositionId == null || destinationPositionHolder == null || !isPlayerPresent) {
-            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
-            return false;
-        }
 
         Integer sourcePositionId = gameState.getActionPendingOn();
         Position destinationPosition = gameState.getPlayerPosition(destinationPositionHolder, destinationPositionId);
@@ -252,5 +237,38 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         }
 
         return false;
+    }
+
+    private boolean isInvalidDestinationPosition(WebSocketSession webSocketSession, ActionContext actionContext, GameState gameState) {
+        String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
+        String destinationPositionHolder = actionContext.getDestinationPositionHolder();
+        boolean isValidPlayer = gameState.getPlayers()
+                                         .stream()
+                                         .anyMatch(player -> player.getClientId().equals(destinationPositionHolder));
+        Integer destinationPosition = actionContext.getDestinationPosition();
+        boolean isValidDestination = destinationPosition != null &&
+                                     destinationPosition >= 1    &&
+                                     destinationPosition <= this.maxPositionPerPlayer;
+        if (!isValidPlayer || !isValidDestination || playerId.equals(destinationPositionHolder)) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isValidSourcePosition(WebSocketSession webSocketSession, ActionContext actionContext, GameState gameState) {
+        String sourcePositionHolder = actionContext.getSourcePositionHolder();
+        boolean isValidPlayer = gameState.getPlayers()
+                                         .stream()
+                                         .anyMatch(player -> player.getClientId().equals(sourcePositionHolder));
+        Integer sourcePosition = actionContext.getSourcePosition();
+        boolean isValidSource = sourcePosition != null &&
+                                     sourcePosition >= 1 &&
+                                     sourcePosition <= this.maxPositionPerPlayer;
+        if (!isValidPlayer || !isValidSource) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
+            return false;
+        }
+        return true;
     }
 }

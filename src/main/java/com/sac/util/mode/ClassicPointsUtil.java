@@ -1,6 +1,7 @@
 package com.sac.util.mode;
 
 import com.sac.model.GameState;
+import com.sac.model.GameState.Player;
 import com.sac.model.actor.Actor;
 
 import static com.sac.model.GameState.GameplayStatus.FINISHED;
@@ -12,12 +13,19 @@ public class ClassicPointsUtil {
     /**
      * Changes current player to nextPlayer and resets all the actions pending
      *
-     * @param nextPlayer username of nextPlayer
      * @param gameState  gameState
      */
-    public static void transitionRollToNextPlayer(String nextPlayer, GameState gameState) {
+    public static void transitionRollToNextPlayer(GameState gameState) {
+        Player nextPlayer = gameState.cycleNextPlayer();
         gameState.setState(ROLL);
-        gameState.setCurrentPlayerId(nextPlayer);
+        gameState.setCurrentPlayerId(nextPlayer.getClientId());
+        gameState.setActionPending(false);
+        gameState.setActionPendingOn(null);
+        gameState.setActionPendingOnActor(null);
+    }
+
+    public static void transitionRollToCurrentPlayer(GameState gameState) {
+        gameState.setState(ROLL);
         gameState.setActionPending(false);
         gameState.setActionPendingOn(null);
         gameState.setActionPendingOnActor(null);

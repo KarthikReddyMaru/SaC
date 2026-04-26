@@ -33,21 +33,22 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
     @Override
     public boolean visit(Roll roll, WebSocketSession webSocketSession, PositionContext positionContext) {
 
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        String username = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
 
+        String actualPlayerId = gameState.getCurrentPlayerId();
         if (!gameState.getCurrentPlayerId()
                       .equals(username)) {
-            String message = String.format("Wait for your turn, %s's turn now", gameState.getOpponent(username)
-                                                                                         .getUsername());
+            String message = String.format("Wait for your turn, %s's turn now",
+                                           gameStateService.getUsernameFromId(actualPlayerId, roomId));
             messageService.sendSystemMessage(webSocketSession, message, ServerResponse.Type.ERROR);
             return false;
         } else if (!gameState.getState()
                              .equals(ROLL) || gameState.isActionPending()) {
             String errorMsg = String.format("%s needs to perform action before choosing",
-                                            gameState.getCurrentPlayerId());
+                                            gameStateService.getUsernameFromId(actualPlayerId, roomId));
             messageService.sendSystemMessage(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
 
             return false;
