@@ -10,8 +10,8 @@ public final class ActorFactory {
     private static final Map<Specialization, Supplier<Actor>> actors = new HashMap<>();
 
     static {
-        actors.put(Specialization.NOVICE, () -> Novice.builder().build());
-        actors.put(Specialization.FIGHTER, () -> Fighter.builder().build());
+        actors.put(Specialization.RECRUIT, () -> Recruit.builder().build());
+        actors.put(Specialization.VETERAN, () -> Veteran.builder().build());
         actors.put(Specialization.PHANTOM, () -> Phantom.builder().build());
     }
 

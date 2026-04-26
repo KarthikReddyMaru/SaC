@@ -49,7 +49,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     }
 
     @Override
-    public boolean visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext context) {
+    public boolean visit(Revert revert, WebSocketSession webSocketSession, ActionContext context) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -87,14 +87,14 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             return false;
         } else if (context.getSourcePosition() != null && gameState.getActionPendingOn()
                                                                    .equals(context.getSourcePosition())) {
-            messageService.sendSystemMessage(webSocketSession, "You cannot perform Kamikaze on the same position");
+            messageService.sendSystemMessage(webSocketSession, "You cannot perform Revert on the same position");
             return false;
         }
         return true;
     }
 
     @Override
-    public boolean visit(Evolve evolve, WebSocketSession webSocketSession, ActionContext actionContext) {
+    public boolean visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
@@ -116,7 +116,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         } else if (!actor.getAllowedTransitions()
                          .contains(requestedTransition) || actor.getCurrentState()
                                                                 .equals(requestedTransition)) {
-            String errorMessage = String.format("%s cannot EVOLVE to %s", actor.getCurrentState(), requestedTransition);
+            String errorMessage = String.format("%s cannot PROMOTE to %s", actor.getCurrentState(), requestedTransition);
             messageService.sendSystemMessage(webSocketSession, errorMessage, ServerResponse.Type.ERROR);
             return false;
         }
@@ -124,7 +124,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     }
 
     @Override
-    public boolean visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession,
+    public boolean visit(Capture capture, WebSocketSession webSocketSession,
                          ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -144,10 +144,10 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                           MessageFormat.noActorPresent(playerPosition.getPositionId()));
             return false;
         } else if (!actor.getAllowedActions()
-                         .contains(attackAndCapture.getActionType())) {
+                         .contains(capture.getActionType())) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.actorCannotPerform(actor.getCurrentState(),
-                                                                           attackAndCapture.getActionType()));
+                                                                           capture.getActionType()));
             return false;
         } else if (opponentPositionId == null ||
                    (actionContext.getDestinationPosition() < 1 ||

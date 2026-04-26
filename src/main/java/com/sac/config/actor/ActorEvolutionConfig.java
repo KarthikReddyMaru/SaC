@@ -12,9 +12,9 @@ public final class ActorEvolutionConfig {
     private final static Map<Specialization, Set<Specialization>> evolutions = new HashMap<>();
 
     static {
-        evolutions.put(Specialization.NOVICE,
-                Set.of(Specialization.FIGHTER, Specialization.PHANTOM));
-        evolutions.put(Specialization.FIGHTER,
+        evolutions.put(Specialization.RECRUIT,
+                Set.of(Specialization.VETERAN, Specialization.PHANTOM));
+        evolutions.put(Specialization.VETERAN,
                 Collections.emptySet());
         evolutions.put(Specialization.PHANTOM,
                 Collections.emptySet());

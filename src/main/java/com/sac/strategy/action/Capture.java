@@ -12,13 +12,13 @@ import org.springframework.web.socket.WebSocketSession;
 
 @Component
 @RequiredArgsConstructor
-public class AttackAndCapture implements Action {
+public class Capture implements Action {
 
     private final GameStateService gameStateService;
 
     @Override
     public GameAction getActionType() {
-        return GameAction.ATTACK_AND_CAPTURE;
+        return GameAction.CAPTURE;
     }
 
     @Override

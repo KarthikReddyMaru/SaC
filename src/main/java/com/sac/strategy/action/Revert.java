@@ -1,9 +1,8 @@
 package com.sac.strategy.action;
 
-import com.sac.factory.ActorFactory;
 import com.sac.model.GameState;
+import com.sac.model.GameState.Player;
 import com.sac.model.Position;
-import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
 import com.sac.util.SocketSessionUtil;
@@ -13,17 +12,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-import static com.sac.strategy.action.GameAction.EVOLVE;
+import static com.sac.strategy.action.GameAction.REVERT;
 
 @Component
 @RequiredArgsConstructor
-public class Evolve implements Action {
+public class Revert implements Action {
 
     private final GameStateService gameStateService;
 
     @Override
     public GameAction getActionType() {
-        return EVOLVE;
+        return REVERT;
     }
 
     @Override
@@ -33,11 +32,23 @@ public class Evolve implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        Specialization requestedTransition = actionContext.getSpecialization();
+
         GameState gameState = gameStateService.getGameState(roomId);
-        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
-        position.setActor(ActorFactory.getInstance(requestedTransition));
+        String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        Player opponent = gameState.getOpponent(username);
+
+        Integer destinationPositionToPerformAction = actionContext.getDestinationPosition();
+        Integer sourcePositionToPerformAction = actionContext.getSourcePosition();
+        Integer actionPendingPosition = gameState.getActionPendingOn();
+
+        Position actionPerformingPosition = gameState.getPlayerPosition(username, actionPendingPosition);
+
+        actionPerformingPosition.setActor(null);
+        if (sourcePositionToPerformAction != null) {
+            gameState.getPlayerPosition(username, sourcePositionToPerformAction).restorePosition();
+        } else {
+            opponent.getPositions()[destinationPositionToPerformAction].restorePosition();
+        }
     }
 
     @Override
@@ -47,6 +58,6 @@ public class Evolve implements Action {
 
     @Override
     public int pointsForSuccessfulAction() {
-        return 0;
+        return 1;
     }
 }

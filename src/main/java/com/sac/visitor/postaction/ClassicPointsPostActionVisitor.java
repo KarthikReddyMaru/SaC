@@ -35,7 +35,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     }
 
     @Override
-    public void visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext actionContext) {
+    public void visit(Revert revert, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -43,12 +43,12 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String opponent = gameState.getOpponent(username).getUsername();
 
         ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
-        pointsService.addPoints(roomId, username, kamikaze.pointsForSuccessfulAction());
+        pointsService.addPoints(roomId, username, revert.pointsForSuccessfulAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
-    public void visit(Evolve evolve, WebSocketSession webSocketSession, ActionContext actionContext) {
+    public void visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -56,18 +56,18 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         String opponent = gameState.getOpponent(username).getUsername();
 
         ClassicPointsUtil.transitionRollToNextPlayer(opponent, gameState);
-        pointsService.addPoints(roomId, username, evolve.pointsForSuccessfulAction());
+        pointsService.addPoints(roomId, username, promote.pointsForSuccessfulAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @Override
-    public void visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession, ActionContext actionContext) {
+    public void visit(Capture capture, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
 
-        pointsService.addPoints(roomId, username, attackAndCapture.pointsForSuccessfulAction());
+        pointsService.addPoints(roomId, username, capture.pointsForSuccessfulAction());
         ClassicPointsUtil.transitionRollToNextPlayer(username, gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }

@@ -16,10 +16,10 @@ public class ActorActionConfig {
     private final static Map<Specialization, Set<GameAction>> actions = new HashMap<>();
 
     static {
-        actions.put(NOVICE,
-                    Set.of(EVOLVE, KAMIKAZE));
-        actions.put(FIGHTER,
-                    Set.of(ATTACK_AND_CAPTURE));
+        actions.put(RECRUIT,
+                    Set.of(PROMOTE, REVERT));
+        actions.put(VETERAN,
+                    Set.of(CAPTURE));
         actions.put(PHANTOM,
                     Set.of(BLACKOUT));
     }

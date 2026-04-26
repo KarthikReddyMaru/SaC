@@ -4,9 +4,9 @@ import java.util.Arrays;
 
 public enum GameAction {
     SPAWN,
-    EVOLVE,
-    KAMIKAZE,
-    ATTACK_AND_CAPTURE,
+    PROMOTE,
+    REVERT,
+    CAPTURE,
     BLACKOUT;
 
     public static GameAction fromString(String gameAction) {

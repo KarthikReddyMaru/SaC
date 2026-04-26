@@ -19,8 +19,8 @@ public class PointsService {
     private final GameStateService gameStateService;
     private final MessageService messageService;
     private final Map<Specialization, Float> bonusMultiplier = Map.of(
-            Specialization.NOVICE, 1f,
-            Specialization.FIGHTER, 1.5f);
+            Specialization.RECRUIT, 1f,
+            Specialization.VETERAN, 1.5f);
 
     public int computeGuessPoints(String roomId, int guessedPosition, String playerId) {
         Player player = gameStateService.getPlayer(roomId, playerId);

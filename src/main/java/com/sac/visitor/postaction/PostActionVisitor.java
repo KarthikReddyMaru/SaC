@@ -7,9 +7,9 @@ import org.springframework.web.socket.WebSocketSession;
 public interface PostActionVisitor {
 
     void visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext);
-    void visit(Kamikaze kamikaze, WebSocketSession webSocketSession, ActionContext actionContext);
-    void visit(Evolve evolve, WebSocketSession webSocketSession, ActionContext actionContext);
-    void visit(AttackAndCapture attackAndCapture, WebSocketSession webSocketSession, ActionContext actionContext);
+    void visit(Revert revert, WebSocketSession webSocketSession, ActionContext actionContext);
+    void visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext);
+    void visit(Capture capture, WebSocketSession webSocketSession, ActionContext actionContext);
     void visit(BlackOut blackOut, WebSocketSession webSocketSession, ActionContext actionContext);
 }
 

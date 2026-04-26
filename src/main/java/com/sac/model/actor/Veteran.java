@@ -4,18 +4,11 @@ import com.sac.config.actor.ActorActionConfig;
 import com.sac.config.actor.ActorEvolutionConfig;
 import com.sac.strategy.action.GameAction;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.Set;
 
-@Slf4j
 @SuperBuilder(toBuilder = true)
-public class Novice extends Actor {
-
-    @Override
-    public Specialization getCurrentState() {
-        return Specialization.NOVICE;
-    }
+public class Veteran extends Actor {
 
     @Override
     public Set<Specialization> getAllowedTransitions() {
@@ -25,6 +18,11 @@ public class Novice extends Actor {
     @Override
     public Set<GameAction> getAllowedActions() {
         return ActorActionConfig.getAllowedActions(getCurrentState());
+    }
+
+    @Override
+    public Specialization getCurrentState() {
+        return Specialization.VETERAN;
     }
 
     @Override

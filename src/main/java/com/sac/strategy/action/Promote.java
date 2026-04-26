@@ -1,8 +1,9 @@
 package com.sac.strategy.action;
 
+import com.sac.factory.ActorFactory;
 import com.sac.model.GameState;
-import com.sac.model.GameState.Player;
 import com.sac.model.Position;
+import com.sac.model.actor.Specialization;
 import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
 import com.sac.util.SocketSessionUtil;
@@ -12,17 +13,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-import static com.sac.strategy.action.GameAction.KAMIKAZE;
+import static com.sac.strategy.action.GameAction.PROMOTE;
 
 @Component
 @RequiredArgsConstructor
-public class Kamikaze implements Action {
+public class Promote implements Action {
 
     private final GameStateService gameStateService;
 
     @Override
     public GameAction getActionType() {
-        return KAMIKAZE;
+        return PROMOTE;
     }
 
     @Override
@@ -32,23 +33,11 @@ public class Kamikaze implements Action {
 
     @Override
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
-
-        GameState gameState = gameStateService.getGameState(roomId);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        Player opponent = gameState.getOpponent(username);
-
-        Integer destinationPositionToPerformAction = actionContext.getDestinationPosition();
-        Integer sourcePositionToPerformAction = actionContext.getSourcePosition();
-        Integer actionPendingPosition = gameState.getActionPendingOn();
-
-        Position actionPerformingPosition = gameState.getPlayerPosition(username, actionPendingPosition);
-
-        actionPerformingPosition.setActor(null);
-        if (sourcePositionToPerformAction != null) {
-            gameState.getPlayerPosition(username, sourcePositionToPerformAction).restorePosition();
-        } else {
-            opponent.getPositions()[destinationPositionToPerformAction].restorePosition();
-        }
+        Specialization requestedTransition = actionContext.getSpecialization();
+        GameState gameState = gameStateService.getGameState(roomId);
+        Position position = gameStateService.getPlayerPosition(roomId, username, gameState.getActionPendingOn());
+        position.setActor(ActorFactory.getInstance(requestedTransition));
     }
 
     @Override
@@ -58,6 +47,6 @@ public class Kamikaze implements Action {
 
     @Override
     public int pointsForSuccessfulAction() {
-        return 1;
+        return 0;
     }
 }
