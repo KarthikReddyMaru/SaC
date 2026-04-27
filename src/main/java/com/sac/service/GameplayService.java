@@ -47,11 +47,14 @@ public class GameplayService {
             log.info("{} is joined, Game initialized", username);
         } else if (gameStateService.exists(clientId, roomId)) {
             roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
-            gameStateService.getGameState(roomId).setGameplayStatus(PLAYING);
+            GameState gameState = gameStateService.getGameState(roomId);
+            if (roomConnectionService.isEveryPlayerOnline(roomId))
+                gameState.setGameplayStatus(PLAYING);
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.gameState(gameStateService.getGameState(roomId)));
             messageService.broadcastMessage(MessageFormat.playerReconnected(username), roomId);
             log.info("{} is re-joined", username);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (gameStateService.hasEmptySlot(roomId)) {
             if (gameStateService.addPlayerInRoom(metadata, roomId)) {
                 roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
@@ -73,9 +76,11 @@ public class GameplayService {
         String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         log.info("{} disconnected", username);
-        gameStateService.getGameState(roomId).setGameplayStatus(OFFLINE);
+        GameState gameState = gameStateService.getGameState(roomId);
+        gameState.setGameplayStatus(OFFLINE);
         roomConnectionService.removePlayerFromRegistry(clientId);
         messageService.broadcastMessage(MessageFormat.playerDisconnected(username), roomId);
+        messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
 
     @SneakyThrows
