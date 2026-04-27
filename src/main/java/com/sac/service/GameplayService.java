@@ -48,23 +48,25 @@ public class GameplayService {
         } else if (gameStateService.exists(clientId, roomId)) {
             roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
             GameState gameState = gameStateService.getGameState(roomId);
-            if (roomConnectionService.isEveryPlayerOnline(roomId))
+            if (roomConnectionService.isEveryPlayerOnline(roomId) &&
+                gameState.getPlayers().size() == gameState.getPlayerCount()) {
                 gameState.setGameplayStatus(PLAYING);
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.gameState(gameStateService.getGameState(roomId)));
+                messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+            }
             messageService.broadcastMessage(MessageFormat.playerReconnected(username), roomId);
             log.info("{} is re-joined", username);
-            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
         } else if (gameStateService.hasEmptySlot(roomId)) {
             if (gameStateService.addPlayerInRoom(metadata, roomId)) {
                 roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
                 if (!gameStateService.hasEmptySlot(roomId)) {
                     GameState gameState = gameStateService.getGameState(roomId);
+                    gameState.setGameplayStatus(PLAYING);
                     ClassicPointsUtil.transitionRollToNextPlayer(gameState);
                     messageService.broadcastMessage(
                             MessageFormat.gameState(gameState), roomId);
                     log.info("{} is joined, GameState is broadcasted", username);
-                    log.info("TurnOrder: {}", gameStateService.getGameState(roomId).getTurnOrder());
+                    log.info("TurnOrder: {}", gameStateService.getGameState(roomId)
+                                                              .getTurnOrder());
                 }
             }
         } else {
