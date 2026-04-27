@@ -98,11 +98,12 @@
             </div>
 
             <div class="flex flex-wrap gap-2 ml-2 md:ml-4">
-                <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Load Mock State</button>
+                <button onclick="injectDummyData()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm hidden md:block">Load Mock</button>
 
-                <button onclick="sendActionPayload('PROMOTE', null, null, null, null, 'VETERAN')" class="bg-purple-900/60 hover:bg-purple-800 text-purple-300 border border-purple-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Promote</button>
-                <button onclick="sendActionPayload('CAPTURE', 1, null, 'opponentMock', null)" class="bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Capture</button>
-                <button onclick="testSendPosition()" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm">Test Position</button>
+                <div class="hidden xl:flex gap-2">
+                    <button onclick="sendActionPayload('PROMOTE', null, null, null, null, 'VETERAN')" class="bg-purple-900/40 hover:bg-purple-800/80 text-purple-400 border border-purple-800/30 font-medium text-[10px] px-2 py-1.5 rounded-md transition-colors shadow-sm">Test Promote</button>
+                    <button onclick="sendActionPayload('CAPTURE', 1, null, 'opponentMock', null)" class="bg-red-900/40 hover:bg-red-800/80 text-red-400 border border-red-800/30 font-medium text-[10px] px-2 py-1.5 rounded-md transition-colors shadow-sm">Test Capture</button>
+                </div>
 
                 <button id="btn-guide" onclick="toggleGuide()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-medium text-xs px-3 py-1.5 rounded-md transition-all duration-300 shadow-sm ml-2">Guide: OFF</button>
             </div>
@@ -112,9 +113,11 @@
             <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner">
                 TURN <span id="hud-turn" class="text-blue-400 ml-1">???</span>
             </div>
-            <div id="hud-status" class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-500 shadow-inner">
-                STATUS: Waiting...
+            <div id="hud-status" class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-500 shadow-inner transition-colors duration-300">
+                STATUS: WAITING...
             </div>
+
+            <button onclick="disconnectUplink()" class="bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-800/50 font-medium text-xs px-3 py-1.5 rounded-md transition-colors shadow-sm ml-2">Abort Uplink</button>
         </div>
     </header>
 
@@ -202,12 +205,31 @@
 
     // SECURE IDENTITY MANAGER
     const IdentityManager = (() => {
-        let _username = "";
+        // Ensure a persistent Client ID exists in localStorage
+        let _clientId = localStorage.getItem('sac_client_id');
+        if (!_clientId) {
+            _clientId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
+            localStorage.setItem('sac_client_id', _clientId);
+        }
+
         return {
-            set: (name) => {
-                if (!_username) _username = name;
+            setUsername: (name) => {
+                localStorage.setItem('sac_username', name);
             },
-            get: () => _username
+            getUsername: () => {
+                return localStorage.getItem('sac_username') || "";
+            },
+            setRoomId: (room) => {
+                localStorage.setItem('sac_room_id', room);
+            },
+            getRoomId: () => {
+                return localStorage.getItem('sac_room_id') || "";
+            },
+            getClientId: () => _clientId,
+            clearSession: () => {
+                localStorage.removeItem('sac_username');
+                localStorage.removeItem('sac_room_id');
+            }
         };
     })();
 
@@ -232,6 +254,17 @@
         renderGrid('p1-grid', emptyPositions, 'p1');
         renderGrid('p2-grid', emptyPositions, 'p2');
         fetchOnlinePlayers();
+
+        // Check for active session and Auto-Reconnect
+        const savedUser = IdentityManager.getUsername();
+        const savedRoom = IdentityManager.getRoomId();
+
+        if (savedUser && savedRoom) {
+            document.getElementById('input-username').value = savedUser;
+            document.getElementById('input-room').value = savedRoom;
+            showToast("info", "Recovering Active Session...");
+            connectToServer();
+        }
     };
 
     function fetchOnlinePlayers() {
@@ -247,7 +280,7 @@
     }
 
     /**
-     * 2. CONNECT TO WEBSOCKET
+     * 2. CONNECT / DISCONNECT LOGIC
      */
     function connectToServer() {
         const user = document.getElementById('input-username').value.trim();
@@ -258,13 +291,15 @@
             return;
         }
 
-        IdentityManager.set(user);
+        // Save session data to localStorage
+        IdentityManager.setUsername(user);
+        IdentityManager.setRoomId(room);
 
         let wsHost = window.location.host;
         if (!wsHost) wsHost = 'localhost:80';
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${room}&username=${IdentityManager.get()}`;
+        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${encodeURIComponent(IdentityManager.getRoomId())}&username=${encodeURIComponent(IdentityManager.getUsername())}&clientId=${encodeURIComponent(IdentityManager.getClientId())}`;
 
         ws = new WebSocket(wsUrl);
 
@@ -273,12 +308,31 @@
             document.getElementById('game-ui').classList.remove('hidden');
             document.getElementById('game-ui').classList.add('flex');
 
-            document.getElementById('hud-room').innerText = room;
-            document.getElementById('p1-name').innerText = IdentityManager.get() + " (You)";
+            document.getElementById('hud-room').innerText = IdentityManager.getRoomId();
+            document.getElementById('p1-name').innerText = IdentityManager.getUsername() + " (You)";
+
+            // HOLD PATTERN UI: Actively communicate that we are waiting for the opponent.
+            const statusEl = document.getElementById('hud-status');
+            statusEl.innerText = "STATUS: AWAITING OPPONENT";
+            statusEl.classList.remove('text-zinc-500');
+            statusEl.classList.add('text-amber-500', 'animate-pulse');
 
             showToast("success", "Uplink Established. Connected to Server.");
-            updateGuide("Connection secure. Awaiting game state from server...");
-            resetActionArea("Synchronizing with Server...");
+            updateGuide("Connection secure. The tactical grid will remain locked until the opponent joins the battlefield.");
+
+            const actionArea = document.getElementById('dynamic-action-area');
+            actionArea.innerHTML = `
+                <div class="flex flex-col items-center justify-center text-center gap-3">
+                    <div class="relative w-8 h-8">
+                        <div class="absolute inset-0 rounded-full border-[3px] border-zinc-800"></div>
+                        <div class="absolute inset-0 rounded-full border-[3px] border-t-amber-500 animate-spin"></div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs text-amber-500 font-bold uppercase tracking-widest animate-pulse">Holding Pattern</span>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-wide">Awaiting Enemy Connection...</span>
+                    </div>
+                </div>
+            `;
         };
 
         ws.onmessage = (event) => {
@@ -326,6 +380,17 @@
         };
     }
 
+    function disconnectUplink() {
+        if (ws) {
+            ws.onclose = null; // Suppress the generic error toast on manual close
+            ws.close();
+        }
+        IdentityManager.clearSession();
+        // A clean reload purges JS memory and returns user to login naturally
+        location.reload();
+    }
+
+
     // ========================================================
     // IDLE NUDGE LOGIC
     // ========================================================
@@ -336,9 +401,9 @@
         const btn = document.getElementById('btn-guide');
         btn.classList.remove('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
 
-        if (!isGuideEnabled && globalGameState && globalGameState.currentPlayerId === IdentityManager.get()) {
+        if (!isGuideEnabled && globalGameState && globalGameState.currentPlayerId === IdentityManager.getClientId() && globalGameState.gameplayStatus !== 'OFFLINE') {
             guideIdleTimer = setTimeout(() => {
-                if (!isGuideEnabled && globalGameState.currentPlayerId === IdentityManager.get()) {
+                if (!isGuideEnabled && globalGameState.currentPlayerId === IdentityManager.getClientId()) {
                     btn.classList.add('ring-4', 'ring-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'animate-pulse');
                     showToast("info", "Commander, tactical guide is available if you need assistance.");
                 }
@@ -361,20 +426,37 @@
 
             // 2. Update HUD
             document.getElementById('hud-mode').innerText = gameState.gameMode ? gameState.gameMode.replace('_', ' ') : '???';
-            document.getElementById('hud-turn').innerText = gameState.currentPlayerId === IdentityManager.get() ? "You" : gameState.currentPlayerId;
+
+            const turnEl = document.getElementById('hud-turn');
+            if (turnEl) {
+                if (gameState.currentPlayerId === IdentityManager.getClientId()) {
+                    turnEl.innerText = "You";
+                } else {
+                    const currentP = gameState.players.find(p => p.clientId === gameState.currentPlayerId);
+                    turnEl.innerText = currentP ? currentP.username : gameState.currentPlayerId;
+                }
+            }
 
             const statusEl = document.getElementById('hud-status');
-            if (gameState.state === 'ACTION_REQUIRED') {
-                statusEl.innerText = `STATUS: Action Pending (Pos ${gameState.actionPendingOn})`;
-                statusEl.className = "bg-zinc-950 border border-amber-500/50 px-3 py-1.5 rounded-md text-xs font-semibold text-amber-500 animate-pulse shadow-sm";
-            } else {
-                statusEl.innerText = `STATUS: ${gameState.state || gameState.positionSelection || 'WAITING'}`;
-                statusEl.className = "bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold text-zinc-400 shadow-inner";
+            if (statusEl) {
+                // Reset to baseline styling
+                statusEl.className = "bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold shadow-inner transition-colors duration-300";
+
+                if (gameState.gameplayStatus === 'OFFLINE') {
+                    statusEl.classList.add('text-red-500', 'animate-pulse', 'border-red-800/50', 'bg-red-950/20');
+                    statusEl.innerText = "STATUS: OPPONENT OFFLINE";
+                } else if (gameState.state === 'ACTION_REQUIRED') {
+                    statusEl.classList.add('text-zinc-500');
+                    statusEl.innerText = `STATUS: Action Pending (Pos ${gameState.actionPendingOn})`;
+                } else {
+                    statusEl.classList.add('text-zinc-500');
+                    statusEl.innerText = `STATUS: ${gameState.state || gameState.positionSelection || 'WAITING'}`;
+                }
             }
 
             // 3. Render Grids
-            const p1 = gameState.players.find(p => p.username === IdentityManager.get());
-            const p2 = gameState.players.find(p => p.username !== IdentityManager.get());
+            const p1 = gameState.players.find(p => p.clientId === IdentityManager.getClientId());
+            const p2 = gameState.players.find(p => p.clientId !== IdentityManager.getClientId());
 
             if (p1) {
                 document.getElementById('p1-score').innerText = p1.points + " PTS";
@@ -389,26 +471,46 @@
             if (gameState.gameplayStatus === 'FINISHED') return;
 
             // 4. Action Area State Routing
-            if (gameState.state === 'ROLL') {
-                renderRollUI(gameState.currentPlayerId === IdentityManager.get());
+            if (gameState.gameplayStatus === 'OFFLINE') {
+                const actionArea = document.getElementById('dynamic-action-area');
+                actionArea.innerHTML = `
+                    <div class="flex flex-col items-center justify-center text-center gap-3">
+                        <svg class="w-8 h-8 text-red-500/80 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3"></path>
+                        </svg>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs text-red-500 font-bold uppercase tracking-widest animate-pulse">Signal Lost</span>
+                            <span class="text-[10px] text-zinc-500 uppercase tracking-wide">Awaiting Enemy Recon...</span>
+                        </div>
+                    </div>
+                `;
+                updateGuide("WARNING: Enemy signal lost. Grid operations suspended until reconnection.");
+            }
+            else if (gameState.state === 'ROLL') {
+                renderRollUI(gameState.currentPlayerId === IdentityManager.getClientId());
             }
             else if (gameState.state === 'ACTION_REQUIRED') {
-                if (gameState.currentPlayerId === IdentityManager.get()) {
+                if (gameState.currentPlayerId === IdentityManager.getClientId()) {
                     renderActionUI(gameState.actionPendingOnActor);
                 } else {
-                    resetActionArea(`Waiting for ${gameState.currentPlayerId} to execute action...`);
+                    resetActionArea(`Waiting for opponent to execute action...`);
 
                     let actorStr = gameState.actionPendingOnActor ? ` using their ${gameState.actionPendingOnActor}` : "";
-                    updateGuide(`Enemy maneuvering: ${gameState.currentPlayerId} is executing a tactical action on Position ${gameState.actionPendingOn}${actorStr}. Stand by.`);
+                    const oppP = gameState.players.find(p => p.clientId === gameState.currentPlayerId);
+                    const oppName = oppP ? oppP.username : 'Opponent';
+
+                    updateGuide(`Enemy maneuvering: ${oppName} is executing a tactical action on Position ${gameState.actionPendingOn}${actorStr}. Stand by.`);
                 }
             }
             else {
-                if (gameState.currentPlayerId === IdentityManager.get()) {
+                if (gameState.currentPlayerId === IdentityManager.getClientId()) {
                     resetActionArea("Awaiting your next directive...");
                     updateGuide("Your turn. Assess the battlefield.");
                 } else {
                     resetActionArea("Waiting for opponent's move...");
-                    updateGuide(`It is ${gameState.currentPlayerId}'s turn. Stand by.`);
+                    const oppP = gameState.players.find(p => p.clientId === gameState.currentPlayerId);
+                    const oppName = oppP ? oppP.username : 'Opponent';
+                    updateGuide(`It is ${oppName}'s turn. Stand by.`);
                 }
             }
 
@@ -450,11 +552,10 @@
                 }
             }
 
-            // *** ACTIVE ACTOR HIGHLIGHT ***
             let activeHighlight = "";
-            if (globalGameState && globalGameState.state === 'ACTION_REQUIRED' && globalGameState.actionPendingOn === i) {
-                const isCurrentPlayerBoard = (playerKey === 'p1' && globalGameState.currentPlayerId === IdentityManager.get()) ||
-                    (playerKey === 'p2' && globalGameState.currentPlayerId !== IdentityManager.get());
+            if (globalGameState && globalGameState.state === 'ACTION_REQUIRED' && globalGameState.actionPendingOn === i && globalGameState.gameplayStatus !== 'OFFLINE') {
+                const isCurrentPlayerBoard = (playerKey === 'p1' && globalGameState.currentPlayerId === IdentityManager.getClientId()) ||
+                    (playerKey === 'p2' && globalGameState.currentPlayerId !== IdentityManager.getClientId());
 
                 if (isCurrentPlayerBoard) {
                     activeHighlight = " ring-4 ring-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] z-10 scale-[1.05] border-cyan-400 bg-cyan-500/10 ";
@@ -473,56 +574,50 @@
     // ========================================================
 
     function handleBoxClick(gridId, posId) {
-        if (!globalGameState) return;
+        // ENFORCED GRID LOCK: Block interactions if disconnected or opponent offline
+        if (!globalGameState || globalGameState.gameplayStatus === 'OFFLINE') {
+            showToast("info", "Grid locked. Awaiting enemy connection.");
+            return;
+        }
 
-        const myName = IdentityManager.get();
-        const opponent = globalGameState.players.find(p => p.username !== myName);
-        const opponentName = opponent ? opponent.username : null;
+        const myClientId = IdentityManager.getClientId();
+        const opponent = globalGameState.players.find(p => p.clientId !== myClientId);
+        const opponentClientId = opponent ? opponent.clientId : null;
 
-        // 1. Wildcard
         if (isWildcardSelecting && gridId === 'p1') {
-            const p1 = globalGameState.players.find(p => p.username === myName);
+            const p1 = globalGameState.players.find(p => p.clientId === myClientId);
             const pos = p1.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
                 isWildcardSelecting = false;
                 ws.send(JSON.stringify({ type: "POSITION", payload: { position: posId } }));
-
-                if (globalGameState) {
-                    updateGameState(globalGameState);
-                }
+                if (globalGameState) updateGameState(globalGameState);
             }
         }
-
-        // 2. Revert Targeting
         else if (isRevertSelecting) {
             if (gridId === 'p1') {
                 if (posId === globalGameState.actionPendingOn) {
                     showToast("error", "Cannot Revert the active unit.");
                     return;
                 }
-                sendActionPayload('REVERT', null, posId, null, myName);
+                sendActionPayload('REVERT', null, posId, null, myClientId);
             }
             else if (gridId === 'p2') {
-                sendActionPayload('REVERT', posId, null, opponentName, null);
+                sendActionPayload('REVERT', posId, null, opponentClientId, null);
             }
         }
-
-        // 3. Capture Targeting
         else if (isCaptureSelecting && gridId === 'p2') {
             const pos = opponent.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
-                sendActionPayload('CAPTURE', posId, null, opponentName, null);
+                sendActionPayload('CAPTURE', posId, null, opponentClientId, null);
             }
         }
-
-        // 4. BlackOut Targeting (PHANTOM)
         else if (isBlackOutSelecting && gridId === 'p2') {
             const pos = opponent.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent && pos.actor) {
-                sendActionPayload('BLACKOUT', posId, null, opponentName, null);
+                sendActionPayload('BLACKOUT', posId, null, opponentClientId, null);
             } else {
                 showToast("error", "BlackOut requires targeting an active enemy actor.");
             }
@@ -543,7 +638,9 @@
         if (isMyTurn) {
             updateGuide("Your turn to roll. Each die features faces 1-5 and a blank. Rolling double blanks unlocks a Wildcard, allowing you to select any of your uncaptured positions.");
         } else {
-            updateGuide(`It is ${globalGameState.currentPlayerId}'s turn to roll. Stand by.`);
+            const oppP = globalGameState.players.find(p => p.clientId === globalGameState.currentPlayerId);
+            const oppName = oppP ? oppP.username : 'Opponent';
+            updateGuide(`It is ${oppName}'s turn to roll. Stand by.`);
         }
 
         actionArea.innerHTML = `
@@ -649,14 +746,17 @@
                         }
                     }
 
-                    const isMyTurnNow = (globalGameState && globalGameState.currentPlayerId === IdentityManager.get());
+                    const isMyTurnNow = (globalGameState && globalGameState.currentPlayerId === IdentityManager.getClientId());
 
-                    if (isWildcard) {
-                        if (isMyTurnNow) triggerWildcardSelection();
-                        else resetActionArea("Opponent triggered a WILDCARD. Waiting for selection...");
-                    } else {
-                        if (!hadPendingState && isMyTurnNow && globalGameState && globalGameState.state === 'ROLL') {
-                            resetActionArea("Analyzing target position...");
+                    // Don't trigger wildcards if opponent dropped mid-roll
+                    if (globalGameState.gameplayStatus !== 'OFFLINE') {
+                        if (isWildcard) {
+                            if (isMyTurnNow) triggerWildcardSelection();
+                            else resetActionArea("Opponent triggered a WILDCARD. Waiting for selection...");
+                        } else {
+                            if (!hadPendingState && isMyTurnNow && globalGameState && globalGameState.state === 'ROLL') {
+                                resetActionArea("Analyzing target position...");
+                            }
                         }
                     }
 
@@ -680,7 +780,7 @@
             <p class="text-[10px] text-zinc-400">Click a glowing box on your board.</p>
         `;
 
-        const p1 = globalGameState.players.find(p => p.username === IdentityManager.get());
+        const p1 = globalGameState.players.find(p => p.clientId === IdentityManager.getClientId());
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
             if (p1Box) {
@@ -803,7 +903,9 @@
             <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
         `;
 
-        const p2 = globalGameState.players.find(p => p.username !== IdentityManager.get());
+        const myClientId = IdentityManager.getClientId();
+        const opponent = globalGameState.players.find(p => p.clientId !== myClientId);
+
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
             if (p1Box) {
@@ -811,8 +913,8 @@
             }
 
             const p2Box = document.getElementById(`p2-box-${i}`);
-            if (p2Box) {
-                const pos = p2.positions.find(p => p.positionId === i);
+            if (p2Box && opponent) {
+                const pos = opponent.positions.find(p => p.positionId === i);
                 if (pos && !pos.capturedByOpponent) {
                     p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
                     p2Box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
@@ -835,7 +937,9 @@
             <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
         `;
 
-        const p2 = globalGameState.players.find(p => p.username !== IdentityManager.get());
+        const myClientId = IdentityManager.getClientId();
+        const opponent = globalGameState.players.find(p => p.clientId !== myClientId);
+
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
             if (p1Box) {
@@ -843,8 +947,8 @@
             }
 
             const p2Box = document.getElementById(`p2-box-${i}`);
-            if (p2Box) {
-                const pos = p2.positions.find(p => p.positionId === i);
+            if (p2Box && opponent) {
+                const pos = opponent.positions.find(p => p.positionId === i);
                 if (pos && !pos.capturedByOpponent && pos.actor) {
                     p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
                     p2Box.classList.add('ring-2', 'ring-purple-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(168,85,247,0.4)]', 'cursor-crosshair', 'border-purple-500');
@@ -865,7 +969,6 @@
         if (sourceHolder !== null) payload.sourcePositionHolder = sourceHolder;
         if (spec !== null) payload.specialization = spec;
 
-        // Wipe targeting flags
         isRevertSelecting = false;
         isCaptureSelecting = false;
         isBlackOutSelecting = false;
@@ -947,8 +1050,14 @@
     }
 
     function appendChatLog(sender, text) {
+        const emptyState = document.getElementById('chat-empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
         const container = document.getElementById('chat-messages');
-        const isMe = (sender === IdentityManager.get() || sender === "You");
+
+        const isMe = (sender === IdentityManager.getUsername() || sender === IdentityManager.getClientId() || sender === "You");
         const senderName = isMe ? "You" : sender;
 
         const alignClass = isMe ? "self-end items-end" : "self-start items-start";
@@ -1002,15 +1111,21 @@
         document.getElementById('game-over-overlay').classList.remove('hidden');
         const winnerText = gameState.winner ? `Winner: ${gameState.winner}` : "Draw / Disconnected";
         document.getElementById('winner-text').innerText = winnerText;
+
+        // Clean up session so next load requires fresh login
+        IdentityManager.clearSession();
     }
 
     // ==========================================
     // TESTING MOCKS & NEW DEBUG ACTIONS
     // ==========================================
     function injectDummyData() {
-        if(!IdentityManager.get()) IdentityManager.set("son");
+        if(!IdentityManager.getUsername()) IdentityManager.setUsername("son");
 
-        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"RECRUIT","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"son","actor":{"currentState":"RECRUIT"},"capturedByOpponent":false},{"positionId":4,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"son","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"son","actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","points":3},{"positions":[{"positionId":0,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":"ryomen","actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":"ryomen","actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":"ryomen","actor":{"currentState":"RECRUIT"},"capturedByOpponent":false}],"username":"ryomen","points":5}],"playerCount":2,"currentPlayerId":"son","actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
+        const myClientId = IdentityManager.getClientId();
+        const dummyOpponentId = "mock-opponent-id-999";
+
+        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"RECRUIT","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":myClientId,"actor":{"currentState":"RECRUIT"},"capturedByOpponent":false},{"positionId":4,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":myClientId,"actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","clientId":myClientId,"points":3},{"positions":[{"positionId":0,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":dummyOpponentId,"actor":{"currentState":"RECRUIT"},"capturedByOpponent":false}],"username":"ryomen","clientId":dummyOpponentId,"points":5}],"playerCount":2,"currentPlayerId":myClientId,"actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
 
         globalGameState = dummyPayload;
         updateGameState(dummyPayload);
