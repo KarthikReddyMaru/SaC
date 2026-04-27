@@ -31,7 +31,7 @@ public class GameState {
     private int totalAvailableMoves;
 
     public enum GameplayStatus {
-        PLAYING, FINISHED, OFFLINE
+        INIT, PLAYING, FINISHED, OFFLINE
     }
 
     public enum State {

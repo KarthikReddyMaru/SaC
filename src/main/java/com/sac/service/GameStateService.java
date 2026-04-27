@@ -15,9 +15,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import static com.sac.model.GameState.GameplayStatus;
+import static com.sac.model.GameState.GameplayStatus.INIT;
 import static com.sac.model.GameState.State.ROLL;
 
 @Slf4j
@@ -34,11 +37,11 @@ public class GameStateService {
             GameState gameState = GameState
                     .builder()
                     .roomId(roomId)
-                    .players(new ArrayList<>())
+                    .players(new CopyOnWriteArrayList<>())
                     .actionPending(false)
                     .actionPendingOn(null)
                     .actionPendingOnActor(null)
-                    .gameplayStatus(GameplayStatus.PLAYING)
+                    .gameplayStatus(INIT)
                     .state(ROLL)
                     .gameMode(gameMode)
                     .positionSelection(PositionSelection.ROLL)
@@ -48,7 +51,7 @@ public class GameStateService {
                     .totalAvailableMoves(Integer.MAX_VALUE)
                     .build();
 
-            gameState.setTurnOrder(new ArrayDeque<>());
+            gameState.setTurnOrder(new ConcurrentLinkedDeque<>());
             return gameState;
         });
     }
