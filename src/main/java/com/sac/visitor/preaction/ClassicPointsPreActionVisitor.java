@@ -92,8 +92,10 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         Position position = gameState.getPlayerPosition(username, gameState.getActionPendingOn());
         Actor actor = position.getActor();
 
-        if (!isValidSourcePosition(webSocketSession, actionContext, gameState) &&
-            isInvalidDestinationPosition(webSocketSession, actionContext, gameState)) {
+        if (actionContext.getSourcePosition() != null && !isValidSourcePosition(webSocketSession, actionContext, gameState)) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
+            return false;
+        } else if (actionContext.getDestinationPosition() != null && isInvalidDestinationPosition(webSocketSession, actionContext, gameState)) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.inValidDestinationProvided());
             return false;
         }

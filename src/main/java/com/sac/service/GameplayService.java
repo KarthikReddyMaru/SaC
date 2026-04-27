@@ -14,6 +14,9 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.util.List;
 
+import static com.sac.model.GameState.GameplayStatus.OFFLINE;
+import static com.sac.model.GameState.GameplayStatus.PLAYING;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,6 +47,7 @@ public class GameplayService {
             log.info("{} is joined, Game initialized", username);
         } else if (gameStateService.exists(clientId, roomId)) {
             roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
+            gameStateService.getGameState(roomId).setGameplayStatus(PLAYING);
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.gameState(gameStateService.getGameState(roomId)));
             messageService.broadcastMessage(MessageFormat.playerReconnected(username), roomId);
@@ -69,6 +73,7 @@ public class GameplayService {
         String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         log.info("{} disconnected", username);
+        gameStateService.getGameState(roomId).setGameplayStatus(OFFLINE);
         roomConnectionService.removePlayerFromRegistry(clientId);
         messageService.broadcastMessage(MessageFormat.playerDisconnected(username), roomId);
     }
