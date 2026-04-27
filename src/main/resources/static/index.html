@@ -339,6 +339,16 @@
                 switch (msg.type) {
                     case "STATE":
                     case "FINISH":
+                        // **ANIMATION PREEMPTION**: If an offline state is detected, instantly kill
+                        // local animations and force a synchronous state lock.
+                        if (msg.content && msg.content.gameplayStatus === 'OFFLINE') {
+                            isAnimatingRoll = false;
+                            pendingGameState = null;
+                            globalGameState = msg.content;
+                            updateGameState(msg.content);
+                            break;
+                        }
+
                         if (isAnimatingRoll) {
                             pendingGameState = msg.content;
                         } else {
@@ -412,7 +422,7 @@
 
     function updateGameState(gameState) {
         try {
-            // 1. Wipe targeting flags
+            // 1. Wipe transient targeting flags to guarantee absolute stateless reliance on the server payload
             isWildcardSelecting = false;
             isRevertSelecting = false;
             isCaptureSelecting = false;
@@ -463,9 +473,8 @@
 
             if (gameState.gameplayStatus === 'FINISHED') return;
 
-            // 4. Action Area State Routing
+            // 4. Action Area State Routing - Strictly evaluated from pure server state
 
-            // Check for Offline
             if (gameState.gameplayStatus === 'OFFLINE') {
                 const actionArea = document.getElementById('dynamic-action-area');
                 actionArea.innerHTML = `
@@ -481,8 +490,7 @@
                 `;
                 updateGuide("WARNING: Enemy signal lost. Grid operations suspended until reconnection.");
             }
-            // Check for Stateless Wildcard Recovery
-            else if (gameState.isWildcard || gameState.wildcardActive) {
+            else if (gameState.state === 'WILDCARD' || gameState.isWildcard || gameState.wildCardActive) {
                 if (gameState.currentPlayerId === IdentityManager.getClientId()) {
                     triggerWildcardSelection();
                 } else {
