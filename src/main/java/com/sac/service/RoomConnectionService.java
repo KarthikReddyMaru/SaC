@@ -38,18 +38,10 @@ public class RoomConnectionService {
                                .collect(Collectors.toUnmodifiableSet());
     }
 
-    public WebSocketSession getPlayerSession(String username) {
-        WebSocketSession webSocketSession =  userRegistry.getOrDefault(username, null);
-        if (webSocketSession != null && webSocketSession.isOpen()) {
-            return webSocketSession;
-        }
-        return null;
-    }
-
-    public void addPlayerToRegistry(String username, WebSocketSession webSocketSession) throws IOException {
-        if (this.userRegistry.containsKey(username))
-            this.userRegistry.get(username).close(CloseStatus.NOT_ACCEPTABLE);
-        this.userRegistry.put(username, webSocketSession);
+    public void addPlayerToRegistry(String clientId, WebSocketSession webSocketSession) throws IOException {
+        if (this.userRegistry.containsKey(clientId))
+            this.userRegistry.get(clientId).close(CloseStatus.NOT_ACCEPTABLE);
+        this.userRegistry.put(clientId, webSocketSession);
     }
 
     public void removePlayerFromRegistry(String username) {
@@ -66,5 +58,9 @@ public class RoomConnectionService {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public boolean isEveryPlayerOnline(String roomId) {
+        return getPlayers(roomId).stream().allMatch(this.userRegistry::containsKey);
     }
 }
