@@ -46,7 +46,6 @@ public class RoomConnectionService {
 
     public void removePlayerFromRegistry(String username) {
         this.userRegistry.remove(username);
-        log.info("User registry: {}", userRegistry);
     }
 
     public void closePlayerSession(String username) {
