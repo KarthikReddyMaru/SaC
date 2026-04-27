@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.List;
-
 import static com.sac.model.GameState.GameplayStatus.OFFLINE;
 import static com.sac.model.GameState.GameplayStatus.PLAYING;
 
@@ -40,14 +38,10 @@ public class GameplayService {
                                                                                   .username(username)
                                                                                   .build();
         GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
+        GameState gameState = gameStateService.initializeGameState(roomId, gameMode, 2);
 
-        if (!gameStateService.exists(roomId)) {
-            gameStateService.initializeGameState(roomId, List.of(metadata), gameMode, 2);
+        if (gameStateService.exists(clientId, roomId)) {
             roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
-            log.info("{} is joined, Game initialized", username);
-        } else if (gameStateService.exists(clientId, roomId)) {
-            roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
-            GameState gameState = gameStateService.getGameState(roomId);
             if (roomConnectionService.isEveryPlayerOnline(roomId) &&
                 gameState.getPlayers().size() == gameState.getPlayerCount()) {
                 gameState.setGameplayStatus(PLAYING);
@@ -55,20 +49,10 @@ public class GameplayService {
             }
             messageService.broadcastMessage(MessageFormat.playerReconnected(username), roomId);
             log.info("{} is re-joined", username);
-        } else if (gameStateService.hasEmptySlot(roomId)) {
-            if (gameStateService.addPlayerInRoom(metadata, roomId)) {
-                roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
-                if (!gameStateService.hasEmptySlot(roomId)) {
-                    GameState gameState = gameStateService.getGameState(roomId);
-                    gameState.setGameplayStatus(PLAYING);
-                    ClassicPointsUtil.transitionRollToNextPlayer(gameState);
-                    messageService.broadcastMessage(
-                            MessageFormat.gameState(gameState), roomId);
-                    log.info("{} is joined, GameState is broadcasted", username);
-                    log.info("TurnOrder: {}", gameStateService.getGameState(roomId)
-                                                              .getTurnOrder());
-                }
-            }
+        } else if (gameStateService.addPlayerInRoom(metadata, roomId)) {
+            roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
+            log.info("{} is joined", username);
+            checkAndStartGame(roomId);
         } else {
             webSocketSession.close(CloseStatus.POLICY_VIOLATION);
         }
@@ -83,6 +67,18 @@ public class GameplayService {
         roomConnectionService.removePlayerFromRegistry(clientId);
         messageService.broadcastMessage(MessageFormat.playerDisconnected(username), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+    }
+
+    private void checkAndStartGame(String roomId) {
+        GameState gameState = gameStateService.getGameState(roomId);
+        if (roomConnectionService.isEveryPlayerOnline(roomId) &&
+            gameState.getPlayers().size() == gameState.getPlayerCount()) {
+
+            gameState.setGameplayStatus(PLAYING);
+            ClassicPointsUtil.transitionRollToNextPlayer(gameState);
+            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+            log.info("GameState is broadcasted, TurnOrder: {}", gameStateService.getGameState(roomId).getTurnOrder());
+        }
     }
 
     @SneakyThrows

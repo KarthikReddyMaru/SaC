@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -28,13 +29,12 @@ public class GameStateService {
     @Value("${player.total_positions}")
     private int playerPositions;
 
-    public void initializeGameState(String roomId, List<PlayerMetadata> players,
-                                    GameMode gameMode, Integer totalPlayers) {
-        if (!gameStates.containsKey(roomId)) {
+    public GameState initializeGameState(String roomId, GameMode gameMode, Integer totalPlayers) {
+        return gameStates.computeIfAbsent(roomId, id -> {
             GameState gameState = GameState
                     .builder()
                     .roomId(roomId)
-                    .players(initializePlayers(players))
+                    .players(new ArrayList<>())
                     .actionPending(false)
                     .actionPendingOn(null)
                     .actionPendingOnActor(null)
@@ -48,9 +48,9 @@ public class GameStateService {
                     .totalAvailableMoves(Integer.MAX_VALUE)
                     .build();
 
-            gameState.setTurnOrder(initializeTurnOrder(gameState));
-            gameStates.put(roomId, gameState);
-        }
+            gameState.setTurnOrder(new ArrayDeque<>());
+            return gameState;
+        });
     }
 
     private List<Player> initializePlayers(List<PlayerMetadata> players) {
@@ -107,24 +107,31 @@ public class GameStateService {
             return gameStates.get(roomId)
                              .getPlayers()
                              .size() < gameStates.get(roomId)
-                                                  .getPlayerCount();
+                                                 .getPlayerCount();
         }
         return true;
     }
 
     public boolean addPlayerInRoom(PlayerMetadata metadata, String roomId) {
         Player player = initializePlayers(List.of(metadata)).getFirst();
-        if (hasEmptySlot(roomId)) {
-            gameStates.get(roomId).addPlayer(player);
-            gameStates.get(roomId).getTurnOrder().addLast(player);
-            return true;
+        GameState gameState = gameStates.get(roomId);
+        synchronized (gameState) {
+            if (hasEmptySlot(roomId)) {
+                gameStates.get(roomId)
+                          .addPlayer(player);
+                gameStates.get(roomId)
+                          .getTurnOrder()
+                          .addLast(player);
+                return true;
+            }
         }
         return false;
     }
 
     public String getUsernameFromId(String clientId, String roomId) {
         return gameStates.get(roomId)
-                .getPlayer(clientId).getUsername();
+                         .getPlayer(clientId)
+                         .getUsername();
     }
 
     @Builder

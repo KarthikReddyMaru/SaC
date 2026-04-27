@@ -39,9 +39,9 @@ public class RoomConnectionService {
     }
 
     public void addPlayerToRegistry(String clientId, WebSocketSession webSocketSession) throws IOException {
-        if (this.userRegistry.containsKey(clientId))
-            this.userRegistry.get(clientId).close(CloseStatus.NOT_ACCEPTABLE);
-        this.userRegistry.put(clientId, webSocketSession);
+        WebSocketSession oldSession = this.userRegistry.put(clientId, webSocketSession);
+        if (oldSession != null && oldSession.isOpen())
+            oldSession.close(CloseStatus.NOT_ACCEPTABLE);
     }
 
     public void removePlayerFromRegistry(String username) {
