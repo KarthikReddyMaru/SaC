@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import static com.sac.model.GameState.GameplayStatus.*;
+
 @Component
 @RequiredArgsConstructor
 public class ClassicPointsPreActionVisitor implements PreActionVisitor {
@@ -230,6 +232,15 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
      * @return true if the action is illegal and should be blocked; false if the action can proceed.
      */
     private boolean isActionIllegal(WebSocketSession session, String username, GameState gameState) {
+
+        if (gameState.getGameplayStatus().equals(INIT)) {
+            messageService.sendRawPayload(session, MessageFormat.systemError("Game not initialized"));
+            return true;
+        } else if (gameState.getGameplayStatus().equals(OFFLINE)) {
+            messageService.sendRawPayload(session, MessageFormat.systemError("Wait till opponent returns"));
+            return true;
+        }
+
         boolean isCurrentPlayer = username.equals(gameState.getCurrentPlayerId());
         boolean hasPendingAction = gameState.isActionPending() && gameState.getActionPendingOn() != null;
 

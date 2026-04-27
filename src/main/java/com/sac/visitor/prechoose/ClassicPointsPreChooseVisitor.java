@@ -16,6 +16,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Random;
 
+import static com.sac.model.GameState.GameplayStatus.*;
 import static com.sac.model.GameState.State.ROLL;
 
 @Component
@@ -37,6 +38,14 @@ public class ClassicPointsPreChooseVisitor implements PreChooseVisitor {
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
 
         GameState gameState = gameStateService.getGameState(roomId);
+
+        if (gameState.getGameplayStatus().equals(INIT)) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError("Game not initialized"));
+            return false;
+        } else if (gameState.getGameplayStatus().equals(OFFLINE)) {
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError("Wait till opponent returns"));
+            return false;
+        }
 
         String actualPlayerId = gameState.getCurrentPlayerId();
         if (!gameState.getCurrentPlayerId()
