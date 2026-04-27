@@ -44,7 +44,7 @@
 
 <body class="bg-zinc-950 text-zinc-100 font-sans h-screen overflow-hidden selection:bg-blue-500/30 relative">
 
-<div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+<div id="toast-container" class="fixed bottom-6 left-6 z-50 flex flex-col-reverse items-start gap-2 pointer-events-none"></div>
 
 <div id="login-screen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950">
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col gap-6">
@@ -203,9 +203,11 @@
     let isGuideEnabled = false;
     let guideIdleTimer = null;
 
+    // Toast Sync Buffers
+    let pendingToasts = [];
+
     // SECURE IDENTITY MANAGER
     const IdentityManager = (() => {
-        // Ensure a persistent Client ID exists in localStorage
         let _clientId = localStorage.getItem('sac_client_id');
         if (!_clientId) {
             _clientId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -213,18 +215,10 @@
         }
 
         return {
-            setUsername: (name) => {
-                localStorage.setItem('sac_username', name);
-            },
-            getUsername: () => {
-                return localStorage.getItem('sac_username') || "";
-            },
-            setRoomId: (room) => {
-                localStorage.setItem('sac_room_id', room);
-            },
-            getRoomId: () => {
-                return localStorage.getItem('sac_room_id') || "";
-            },
+            setUsername: (name) => { localStorage.setItem('sac_username', name); },
+            getUsername: () => { return localStorage.getItem('sac_username') || ""; },
+            setRoomId: (room) => { localStorage.setItem('sac_room_id', room); },
+            getRoomId: () => { return localStorage.getItem('sac_room_id') || ""; },
             getClientId: () => _clientId,
             clearSession: () => {
                 localStorage.removeItem('sac_username');
@@ -291,7 +285,6 @@
             return;
         }
 
-        // Save session data to localStorage
         IdentityManager.setUsername(user);
         IdentityManager.setRoomId(room);
 
@@ -311,7 +304,7 @@
             document.getElementById('hud-room').innerText = IdentityManager.getRoomId();
             document.getElementById('p1-name').innerText = IdentityManager.getUsername() + " (You)";
 
-            // HOLD PATTERN UI: Actively communicate that we are waiting for the opponent.
+            // HOLD PATTERN UI
             const statusEl = document.getElementById('hud-status');
             statusEl.innerText = "STATUS: AWAITING OPPONENT";
             statusEl.classList.remove('text-zinc-500');
@@ -328,7 +321,7 @@
                         <div class="absolute inset-0 rounded-full border-[3px] border-t-amber-500 animate-spin"></div>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <span class="text-xs text-amber-500 font-bold uppercase tracking-widest animate-pulse">Holding Pattern</span>
+                        <span class="text-xs text-amber-500 font-bold uppercase tracking-widest animate-pulse">Hold</span>
                         <span class="text-[10px] text-zinc-500 uppercase tracking-wide">Awaiting Enemy Connection...</span>
                     </div>
                 </div>
@@ -357,10 +350,12 @@
                         }
                         break;
                     case "INFO":
-                        showToast("info", msg.content);
+                        if (isAnimatingRoll) pendingToasts.push({ type: "info", text: msg.content });
+                        else showToast("info", msg.content);
                         break;
                     case "ERROR":
-                        showToast("error", msg.content);
+                        if (isAnimatingRoll) pendingToasts.push({ type: "error", text: msg.content });
+                        else showToast("error", msg.content);
                         break;
                     case "MESSAGE":
                         appendChatLog(msg.sender, msg.content);
@@ -382,11 +377,10 @@
 
     function disconnectUplink() {
         if (ws) {
-            ws.onclose = null; // Suppress the generic error toast on manual close
+            ws.onclose = null;
             ws.close();
         }
         IdentityManager.clearSession();
-        // A clean reload purges JS memory and returns user to login naturally
         location.reload();
     }
 
@@ -439,7 +433,6 @@
 
             const statusEl = document.getElementById('hud-status');
             if (statusEl) {
-                // Reset to baseline styling
                 statusEl.className = "bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-md text-xs font-semibold shadow-inner transition-colors duration-300";
 
                 if (gameState.gameplayStatus === 'OFFLINE') {
@@ -471,6 +464,8 @@
             if (gameState.gameplayStatus === 'FINISHED') return;
 
             // 4. Action Area State Routing
+
+            // Check for Offline
             if (gameState.gameplayStatus === 'OFFLINE') {
                 const actionArea = document.getElementById('dynamic-action-area');
                 actionArea.innerHTML = `
@@ -485,6 +480,14 @@
                     </div>
                 `;
                 updateGuide("WARNING: Enemy signal lost. Grid operations suspended until reconnection.");
+            }
+            // Check for Stateless Wildcard Recovery
+            else if (gameState.isWildcard || gameState.wildcardActive) {
+                if (gameState.currentPlayerId === IdentityManager.getClientId()) {
+                    triggerWildcardSelection();
+                } else {
+                    resetActionArea("Opponent triggered a WILDCARD. Waiting for selection...");
+                }
             }
             else if (gameState.state === 'ROLL') {
                 renderRollUI(gameState.currentPlayerId === IdentityManager.getClientId());
@@ -574,7 +577,6 @@
     // ========================================================
 
     function handleBoxClick(gridId, posId) {
-        // ENFORCED GRID LOCK: Block interactions if disconnected or opponent offline
         if (!globalGameState || globalGameState.gameplayStatus === 'OFFLINE') {
             showToast("info", "Grid locked. Awaiting enemy connection.");
             return;
@@ -748,7 +750,6 @@
 
                     const isMyTurnNow = (globalGameState && globalGameState.currentPlayerId === IdentityManager.getClientId());
 
-                    // Don't trigger wildcards if opponent dropped mid-roll
                     if (globalGameState.gameplayStatus !== 'OFFLINE') {
                         if (isWildcard) {
                             if (isMyTurnNow) triggerWildcardSelection();
@@ -759,6 +760,10 @@
                             }
                         }
                     }
+
+                    // Flush any toasts that came in during the animation
+                    pendingToasts.forEach(t => showToast(t.type, t.text));
+                    pendingToasts = [];
 
                     manageGuideIdleNudge();
 
@@ -959,7 +964,6 @@
         }
     }
 
-    // THE UPDATED ACTION PAYLOAD GENERATOR
     function sendActionPayload(actionType, targetPosId = null, sourcePosId = null, targetHolder = null, sourceHolder = null, spec = null) {
         let payload = { gameAction: actionType };
 
@@ -1007,46 +1011,49 @@
     function showToast(type, text) {
         const container = document.getElementById('toast-container');
 
-        if (container.children.length >= 3) {
-            container.removeChild(container.firstChild);
+        // Allow up to 4 toasts to stack before removing oldest
+        if (container.children.length >= 4) {
+            container.removeChild(container.lastChild); // Remove from the bottom of the reversed flex list
         }
 
-        let colorClass = "bg-zinc-800 border-zinc-700 text-zinc-200";
+        let colorClass = "bg-zinc-800/90 border-zinc-700 text-zinc-200";
         let iconHtml = '';
 
         if (type === "error") {
-            colorClass = "bg-red-950/95 border-red-800 text-red-300";
-            iconHtml = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            colorClass = "bg-red-950/90 border-red-800 text-red-300 shadow-[0_0_20px_rgba(220,38,38,0.2)]";
+            iconHtml = `<svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
         } else if (type === "success") {
-            colorClass = "bg-emerald-950/95 border-emerald-800 text-emerald-300";
-            iconHtml = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            colorClass = "bg-emerald-950/90 border-emerald-800 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.2)]";
+            iconHtml = `<svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
         } else {
-            colorClass = "bg-zinc-800/95 border-zinc-700 text-zinc-200";
-            iconHtml = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            colorClass = "bg-zinc-800/90 border-zinc-700 text-zinc-200 shadow-[0_0_20px_rgba(0,0,0,0.4)]";
+            iconHtml = `<svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
         }
 
         const toast = document.createElement('div');
-        toast.className = `px-4 py-2.5 rounded-lg border shadow-[0_0_20px_rgba(0,0,0,0.5)] text-xs font-medium flex items-center gap-2.5 transition-all duration-300 transform -translate-y-4 opacity-0 ${colorClass}`;
+        toast.className = `px-4 py-3 rounded-lg border text-xs font-mono flex items-start gap-3 transition-all duration-300 transform -translate-x-8 opacity-0 ${colorClass} max-w-sm backdrop-blur-md`;
 
         toast.innerHTML = iconHtml;
         const textNode = document.createElement('span');
         textNode.textContent = text;
+        textNode.className = "leading-relaxed break-words";
         toast.appendChild(textNode);
 
-        container.appendChild(toast);
+        // Prepend because we are using flex-col-reverse, this makes it pop at the bottom
+        container.prepend(toast);
 
         requestAnimationFrame(() => {
-            toast.classList.remove('-translate-y-4', 'opacity-0');
+            toast.classList.remove('-translate-x-8', 'opacity-0');
         });
 
         setTimeout(() => {
-            toast.classList.add('opacity-0', '-translate-y-2');
+            toast.classList.add('opacity-0', 'translate-y-2');
             setTimeout(() => {
                 if (container.contains(toast)) {
                     container.removeChild(toast);
                 }
             }, 300);
-        }, 3000);
+        }, 4000);
     }
 
     function appendChatLog(sender, text) {
@@ -1112,7 +1119,6 @@
         const winnerText = gameState.winner ? `Winner: ${gameState.winner}` : "Draw / Disconnected";
         document.getElementById('winner-text').innerText = winnerText;
 
-        // Clean up session so next load requires fresh login
         IdentityManager.clearSession();
     }
 
