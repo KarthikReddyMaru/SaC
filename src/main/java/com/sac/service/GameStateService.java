@@ -81,8 +81,6 @@ public class GameStateService {
     }
 
     public GameState getGameState(String roomId) {
-        if (!gameStates.containsKey(roomId))
-            log.warn("Game state not found for Room ID: {}", roomId);
         return gameStates.getOrDefault(roomId, null);
     }
 

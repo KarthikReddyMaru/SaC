@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sac.model.message.MessageContext;
 import com.sac.model.message.MessageEnvelope;
 import com.sac.service.MessageService;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -22,7 +23,7 @@ public class ChatEnvelopeHandler implements EnvelopeHandler {
         return MessageEnvelope.Type.CHAT;
     }
 
-    @Override
+    @Override @WithSpan("envelope.message")
     public void handle(WebSocketSession webSocketSession, MessageEnvelope messageEnvelope, String roomId) throws IOException {
         MessageContext messageContext = objectMapper.treeToValue(messageEnvelope.getPayload(), MessageContext.class);
         messageService.sendMessage(webSocketSession, messageContext.getMessage(), roomId);

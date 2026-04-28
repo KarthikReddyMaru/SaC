@@ -21,7 +21,7 @@ public class MessageService {
     public void broadcastMessage(String message, String roomId) {
         Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
         for (WebSocketSession session : sessions) {
-            if (session.isOpen()) {
+            if (session != null && session.isOpen()) {
                 try {
                     session.sendMessage(new TextMessage(message));
                 } catch (IOException e) {

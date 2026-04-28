@@ -53,9 +53,7 @@ public class RoomConnectionService {
         if (webSocketSession != null && webSocketSession.isOpen()) {
             try {
                 webSocketSession.close(CloseStatus.NORMAL);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            } catch (IOException ignored) {}
         }
     }
 

@@ -10,10 +10,13 @@ import com.sac.service.GameStateService;
 import com.sac.util.SocketSessionUtil;
 import com.sac.visitor.postaction.PostActionVisitor;
 import com.sac.visitor.preaction.PreActionVisitor;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class Spawn implements Action {
@@ -30,7 +33,7 @@ public class Spawn implements Action {
         return preActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
-    @Override
+    @Override @WithSpan("action.span")
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
         String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         GameState gameState = gameStateService.getGameState(roomId);
@@ -38,6 +41,8 @@ public class Spawn implements Action {
         Position position = gameState.getPlayerPosition(playerId, playerPositionId);
         Actor actor = ActorFactory.getInstance(Specialization.RECRUIT);
         position.setActor(actor);
+
+        log.info("SPAWNED {} at {}", position.getActor().getCurrentState().name(), position.getPositionId());
     }
 
     @Override

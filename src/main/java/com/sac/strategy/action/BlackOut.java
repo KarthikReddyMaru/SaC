@@ -9,12 +9,15 @@ import com.sac.service.GameStateService;
 import com.sac.util.SocketSessionUtil;
 import com.sac.visitor.postaction.PostActionVisitor;
 import com.sac.visitor.preaction.PreActionVisitor;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 import static com.sac.strategy.action.GameAction.BLACKOUT;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class BlackOut implements Action {
@@ -26,7 +29,7 @@ public class BlackOut implements Action {
         return preActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
-    @Override
+    @Override @WithSpan("action.blackout")
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
 
         GameState gameState = gameStateService.getGameState(roomId);
@@ -50,6 +53,9 @@ public class BlackOut implements Action {
         }
         currentPlayerPosition.setActor(null);
         actionContext.setAdditionalInfo(String.valueOf(wipedPositions));
+
+        log.info("Wiped out {} {} of {}", wipedPositions, destinationPositionActorState.name(),
+                 gameStateService.getUsernameFromId(destinationPositionHolder, roomId));
     }
 
     @Override

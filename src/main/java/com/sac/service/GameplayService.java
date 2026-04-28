@@ -5,10 +5,14 @@ import com.sac.model.GameState;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import com.sac.util.mode.ClassicPointsUtil;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
@@ -16,8 +20,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.util.Map;
 import java.util.concurrent.*;
 
-import static com.sac.model.GameState.GameplayStatus.OFFLINE;
-import static com.sac.model.GameState.GameplayStatus.PLAYING;
+import static com.sac.model.GameState.GameplayStatus.*;
 
 @Slf4j
 @Service
@@ -31,6 +34,7 @@ public class GameplayService {
     private final Map<String, ScheduledFuture<?>> timers = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(4);
 
+    @WithSpan("room.join")
     public void tryJoin(WebSocketSession webSocketSession) throws Exception {
         String roomId = SocketSessionUtil.getQueryParamValue(webSocketSession, "roomId");
         if (roomId == null || roomId.isEmpty()) {
@@ -54,7 +58,8 @@ public class GameplayService {
             }
             roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
             if (roomConnectionService.isEveryPlayerOnline(roomId) &&
-                gameState.getPlayers().size() == gameState.getPlayerCount()) {
+                gameState.getPlayers()
+                         .size() == gameState.getPlayerCount()) {
                 gameState.setGameplayStatus(PLAYING);
                 messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
             }
@@ -68,11 +73,14 @@ public class GameplayService {
         }
     }
 
+    @WithSpan("room.leave")
     public void tryLeave(WebSocketSession webSocketSession, String roomId) {
         String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
         log.info("{} disconnected", username);
         GameState gameState = gameStateService.getGameState(roomId);
+        if (gameState == null || gameState.getGameplayStatus().equals(FINISHED))
+            return;
         gameState.setGameplayStatus(OFFLINE);
         roomConnectionService.removePlayerFromRegistry(clientId);
         startTimer(clientId, roomId);
@@ -83,7 +91,8 @@ public class GameplayService {
     private void checkAndStartGame(String roomId) {
         GameState gameState = gameStateService.getGameState(roomId);
         if (roomConnectionService.isEveryPlayerOnline(roomId) &&
-            gameState.getPlayers().size() == gameState.getPlayerCount()) {
+            gameState.getPlayers()
+                     .size() == gameState.getPlayerCount()) {
 
             gameState.setGameplayStatus(PLAYING);
             ClassicPointsUtil.transitionRollToNextPlayer(gameState);
@@ -93,6 +102,7 @@ public class GameplayService {
     }
 
     public void endGame(String roomId, String winner) {
+        log.info("Game completed, Winner: {}", gameStateService.getUsernameFromId(winner, roomId));
         GameState gameState = gameStateService.getGameState(roomId);
         ClassicPointsUtil.endGameWithWinner(winner, gameState);
         messageService.broadcastMessage(
@@ -102,31 +112,33 @@ public class GameplayService {
                  .map(GameState.Player::getClientId)
                  .forEach(roomConnectionService::closePlayerSession);
         gameStateService.removeGameState(roomId);
-        log.info("GameState - {}", gameStateService.getGameState(roomId));
+        log.info("GameState of {} - {}", roomId, gameStateService.getGameState(roomId));
     }
 
     public void startTimer(String clientId, String roomId) {
         ScheduledFuture<?> scheduledFuture = scheduledExecutorService.schedule(() -> {
             if (timers.remove(clientId) == null) {
-                log.info("Looks like {} re-joined, {} is alive", gameStateService.getUsernameFromId(clientId, roomId),
+                log.info("Looks like {} re-joined, {} is alive",
+                         gameStateService.getUsernameFromId(clientId, roomId),
                          roomId);
                 return;
             }
-            log.info("Timeout, clearing gameState");
+            log.info("Timeout, clearing gameState of {}", roomId);
             endGame(roomId, "NONE");
-        }, 60, TimeUnit.SECONDS);
+        }, 10, TimeUnit.SECONDS);
         timers.put(clientId, scheduledFuture);
+        log.warn("Timer started to clear gameState");
     }
 
     public boolean endTimer(String clientId, String roomId) {
         ScheduledFuture<?> scheduledFuture = timers.remove(clientId);
+        String username = gameStateService.getUsernameFromId(clientId, roomId);
         if (scheduledFuture == null) {
-            log.info("{} joined, but gameState is already cleared",
-                     gameStateService.getUsernameFromId(clientId, roomId));
+            log.info("{} joined, but gameState is already cleared", username);
             return false;
         }
         scheduledFuture.cancel(false);
-        log.info("{} is re-joined", gameStateService.getUsernameFromId(clientId, roomId));
+        log.info("Timer stopped because {} is re-joined", username);
         return true;
     }
 

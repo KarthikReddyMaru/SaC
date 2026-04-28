@@ -10,17 +10,15 @@ import com.sac.service.GameplayService;
 import com.sac.service.MessageService;
 import com.sac.strategy.action.Action;
 import com.sac.strategy.position.Roll;
-import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
-import com.sac.util.mode.ClassicPointsUtil;
 import com.sac.visitor.postaction.ClassicPointsPostActionVisitor;
 import com.sac.visitor.preaction.ClassicPointsPreActionVisitor;
 import com.sac.visitor.prechoose.ClassicPointsPreChooseVisitor;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
@@ -65,7 +63,7 @@ public class ClassicPoints implements Mode {
         return GameMode.CLASSIC_POINTS;
     }
 
-    @Override
+    @Override @WithSpan("mode.choose")
     public void performChoose(WebSocketSession webSocketSession, PositionContext message) throws IOException {
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
         if (roll.preChoose(classicPointsPreChooseVisitor, webSocketSession, message)) {
@@ -73,7 +71,7 @@ public class ClassicPoints implements Mode {
         }
     }
 
-    @Override
+    @Override @WithSpan("mode.action")
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) throws IOException {
         Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
         if (action.preAction(classicPointsPreActionVisitor, webSocketSession, actionContext)) {

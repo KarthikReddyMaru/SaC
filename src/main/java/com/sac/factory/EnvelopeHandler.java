@@ -8,5 +8,5 @@ import java.io.IOException;
 
 public interface EnvelopeHandler {
     Type getType();
-    void handle(WebSocketSession webSocketSession, MessageEnvelope messageEnvelope, String roomId) throws IOException;
+    void handle(WebSocketSession webSocketSession, MessageEnvelope messageEnvelope, String roomId) throws Exception;
 }

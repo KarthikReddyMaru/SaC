@@ -9,19 +9,23 @@ import com.sac.strategy.action.*;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import com.sac.util.mode.ClassicPointsUtil;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("LoggingSimilarMessage")
 public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
     private final PointsService pointsService;
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
-    @Override
+    @Override @WithSpan("postaction.dtop")
     public void visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -29,6 +33,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
     }
 
     @Override
@@ -39,6 +44,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
     }
 
     @Override
@@ -51,6 +57,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         pointsService.addPoints(roomId, playerId, revert.pointsForSuccessfulAction());
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
     }
 
     @Override
@@ -61,6 +68,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
 
         ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
     }
 
     @Override
@@ -73,6 +81,7 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         pointsService.addPoints(roomId, playerId, capture.pointsForSuccessfulAction());
         ClassicPointsUtil.transitionRollToCurrentPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
     }
 
     @Override
@@ -84,5 +93,6 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
         pointsService.addPoints(roomId, playerId, Integer.parseInt(actionContext.getAdditionalInfo()));
         ClassicPointsUtil.transitionRollToNextPlayer(gameState);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+        log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
     }
 }

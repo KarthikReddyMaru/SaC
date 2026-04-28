@@ -6,10 +6,13 @@ import com.sac.service.GameStateService;
 import com.sac.util.SocketSessionUtil;
 import com.sac.visitor.postaction.PostActionVisitor;
 import com.sac.visitor.preaction.PreActionVisitor;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class Capture implements Action {
@@ -27,7 +30,7 @@ public class Capture implements Action {
         return preActionVisitor.visit(this, webSocketSession, actionContext);
     }
 
-    @Override
+    @Override @WithSpan("action.capture")
     public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
 
         String playerId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
@@ -36,7 +39,8 @@ public class Capture implements Action {
         Position opponentPosition = gameStateService.getGameState(roomId)
                                                     .getPlayerPosition(opponentId, opponentPositionId);
         opponentPosition.capturePosition(playerId);
-
+        log.info("Captured {} position: {}", gameStateService.getUsernameFromId(actionContext.getDestinationPositionHolder(), roomId),
+                 actionContext.getDestinationPosition());
     }
 
     @Override

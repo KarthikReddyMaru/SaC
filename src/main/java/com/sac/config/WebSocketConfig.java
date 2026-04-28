@@ -13,11 +13,11 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final RoomConnectionHandler roomConnectionHandler;
+    private final LoggingWebSocketDecorator loggingWebSocketDecorator;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new LoggingWebSocketDecorator(roomConnectionHandler), "/ws/room")
+        registry.addHandler(loggingWebSocketDecorator, "/ws/room")
                 .setAllowedOrigins("*");
     }
 }
