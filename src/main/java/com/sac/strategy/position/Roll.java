@@ -45,7 +45,7 @@ public class Roll implements PositionSelectionHandlerStrategy {
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
 
             log.info("Player landed on captured territory at {}", message.getPosition());
-            log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(currentPlayer, roomId));
+            log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
             Span.current().addEvent("captured_territory").setAttribute("position", message.getPosition());
 
         } else if (position.getActor() == null) {
@@ -53,7 +53,7 @@ public class Roll implements PositionSelectionHandlerStrategy {
             spawn.performAction(webSocketSession, null, roomId);
             ClassicPointsUtil.transitionRollToNextPlayer(gameState);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
-            log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(currentPlayer, roomId));
+            log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
             Span.current().addEvent("empty_territory").setAttribute("position", message.getPosition());
 
 
