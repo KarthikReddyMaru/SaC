@@ -83,12 +83,12 @@ public class GameplayService {
     public void tryLeave(WebSocketSession webSocketSession, String roomId) {
         String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
-        log.info("{} disconnected", username);
+        roomConnectionService.removePlayerFromRegistry(clientId);
+        log.info("{} disconnected, Entry in user registry - {}", username, roomConnectionService.exists(clientId));
         GameState gameState = gameStateService.getGameState(roomId);
         if (gameState == null || gameState.getGameplayStatus().equals(FINISHED))
             return;
         gameState.setGameplayStatus(OFFLINE);
-        roomConnectionService.removePlayerFromRegistry(clientId);
         if (gameStateService.exists(clientId, roomId))
             startTimer(clientId, roomId);
         messageService.broadcastMessage(MessageFormat.playerDisconnected(username), roomId);
@@ -134,7 +134,7 @@ public class GameplayService {
             }
             log.info("Timeout, clearing gameState of {}", roomId);
             endGame(roomId, "NONE");
-        }, 10, TimeUnit.SECONDS);
+        }, 60, TimeUnit.SECONDS);
         timers.put(clientId, scheduledFuture);
         log.warn("Timer started to clear gameState");
     }

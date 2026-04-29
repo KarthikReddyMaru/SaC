@@ -69,8 +69,12 @@ public class RoomConnectionService {
         return getPlayers(roomId).stream().anyMatch(this.userRegistry::containsKey);
     }
 
+    public boolean exists(String clientId) {
+        return this.userRegistry.containsKey(clientId);
+    }
+
     @PostConstruct
-    public void initMetric() {
+    private void initMetric() {
         Gauge.builder("SaC.users.active", userRegistry, Map::size)
              .description("Current number of active users")
              .register(meterRegistry);

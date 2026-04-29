@@ -54,7 +54,7 @@ public class Revert implements Action {
             gameState.getPlayerPosition(playerId, sourcePositionToPerformAction)
                      .restorePosition();
             log.info("{}'s position {} is REVERTED back to previous state",
-                     gameStateService.getUsernameFromId(opponentPlayerId, roomId), destinationPositionToPerformAction);
+                     gameStateService.getUsernameFromId(playerId, roomId), destinationPositionToPerformAction);
         } else {
             gameState.getPlayerPosition(opponentPlayerId, destinationPositionToPerformAction)
                      .restorePosition();

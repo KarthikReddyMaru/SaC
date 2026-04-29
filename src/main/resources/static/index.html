@@ -167,7 +167,7 @@
                 </div>
             </div>
 
-            <div id="guide-panel" style="display: none;" class="w-full h-28 guide-scroll overflow-y-auto bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto flex-shrink-0">
+            <div id="guide-panel" style="display: none;" class="w-full h-36 guide-scroll overflow-y-auto bg-zinc-950/80 border-t border-zinc-800 p-3 md:p-4 text-center transition-opacity duration-300 shadow-[0_-4px_15px_rgba(0,0,0,0.3)] mt-auto flex-shrink-0">
                 <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 h-full">
                     <div class="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex-shrink-0 shadow-inner mt-1 md:mt-0">
                         <span class="text-[10px] uppercase tracking-[0.1em] text-blue-400 font-bold">Commander's Guide</span>
@@ -522,7 +522,7 @@
                     const oppP = gameState.players.find(p => p.clientId === gameState.currentPlayerId);
                     const oppName = oppP ? oppP.username : 'Opponent';
 
-                    updateGuide(`Enemy maneuvering: ${oppName} is executing a tactical action on Position ${gameState.actionPendingOn}${actorStr}. Stand by.`);
+                    updateGuide(`Enemy cooking something: ${oppName} is executing a tactical action on Position ${gameState.actionPendingOn}${actorStr}. Stand by.`);
                 }
             }
             else {
@@ -848,7 +848,7 @@
 
         if (actorType === "RECRUIT") {
             isValidActor = true;
-            updateGuide("Recruit Selected: Promote to a Veteran or Phantom, trigger a Revert, or Drop your turn to hold position! 💥 Revert sacrifices your Recruit to rewind the target's timeline.");
+            updateGuide("Recruit Selected: Promote, trigger a Revert, or Drop your turn! REVERT deletes your current Recruit to rewind the timeline of any selected position (yours or the enemy's). Ex: If an opponent's tile went Empty ➔ Recruit ➔ Phantom, Reverting it degrades it back to a Recruit. That Phantom state is permanently erased from the timeline reverting it again takes it to Empty, not Phantom. You can even use this to rewind a Captured position back to its previous state! DROP skips your action; your Recruit stays put, and you simply yield your turn.");
             html += `
                 <button onclick="showPromoteOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Promote</button>
                 <button onclick="triggerRevertSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Revert</button>
@@ -856,13 +856,13 @@
         }
         else if (actorType === "VETERAN") {
             isValidActor = true;
-            updateGuide("Veteran Selected: Target an uncaptured enemy position to capture it, or Drop your turn. Initiating an attack grants you an immediate bonus roll.");
+            updateGuide("Veteran Selected: Target an uncaptured enemy position to capture it, or Drop your turn. A successful capture of an opponent position will grant you a chance to roll the dice again. DROP skips your action; your Veteran stays put, and you simply yield your turn.");
             html += `
                 <button onclick="triggerCaptureSelection()" class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Capture</button>`;
         }
         else if (actorType === "PHANTOM") {
             isValidActor = true;
-            updateGuide("Phantom Selected: Perform a BlackOut on an enemy position, or Drop your turn. Selecting an enemy actor will destroy your Phantom and eliminate all matching enemy unit types across their board.");
+            updateGuide("Phantom Selected: Perform a BlackOut or Drop your turn. Select an enemy position containing the type of actor you want to erase from their board. Executing this will eliminate all matching enemy units, and the specific Phantom that performed the BlackOut will disappear from your board. DROP skips your action; your Phantom stays put, and you simply yield your turn.");
             html += `
                 <button onclick="triggerBlackOutSelection()" class="col-span-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">BlackOut</button>`;
         }
@@ -890,7 +890,7 @@
                 <button onclick="renderActionUI('RECRUIT')" class="col-span-2 mt-2 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
             </div>
         `;
-        updateGuide("Select VETERAN for offensive capture capabilities, or PHANTOM for the tactical BlackOut action.");
+        updateGuide("PROMOTE to VETERAN to capture an opponent position, or PHANTOM to trigger a BlackOut, erasing a specific type of actor entirely from the enemy board.");
     }
 
     function triggerRevertSelection() {
