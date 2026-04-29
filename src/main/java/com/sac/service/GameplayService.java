@@ -44,12 +44,13 @@ public class GameplayService {
 
         String clientId = SocketSessionUtil.getClientIdFromSession(webSocketSession);
         String username = SocketSessionUtil.getUserNameFromSession(webSocketSession);
+        int totalPlayers = SocketSessionUtil.getRoomSizeFromSession(webSocketSession);
         GameStateService.PlayerMetadata metadata = GameStateService.PlayerMetadata.builder()
                                                                                   .clientId(clientId)
                                                                                   .username(username)
                                                                                   .build();
         GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
-        GameState gameState = gameStateService.initializeGameState(roomId, gameMode, 2);
+        GameState gameState = gameStateService.initializeGameState(roomId, gameMode, totalPlayers);
 
         if (gameStateService.exists(clientId, roomId)) {
             if (!endTimer(clientId, roomId)) {
@@ -69,6 +70,7 @@ public class GameplayService {
             log.info("{} is joined", username);
             checkAndStartGame(roomId);
         } else {
+            log.warn("Disconnecting player because {} is full", roomId);
             webSocketSession.close(CloseStatus.POLICY_VIOLATION);
         }
     }
@@ -83,7 +85,8 @@ public class GameplayService {
             return;
         gameState.setGameplayStatus(OFFLINE);
         roomConnectionService.removePlayerFromRegistry(clientId);
-        startTimer(clientId, roomId);
+        if (gameStateService.exists(clientId, roomId))
+            startTimer(clientId, roomId);
         messageService.broadcastMessage(MessageFormat.playerDisconnected(username), roomId);
         messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
     }
@@ -102,7 +105,8 @@ public class GameplayService {
     }
 
     public void endGame(String roomId, String winner) {
-        log.info("Game completed, Winner: {}", gameStateService.getUsernameFromId(winner, roomId));
+        if (!winner.equals("NONE"))
+            log.info("Game completed, Winner: {}", gameStateService.getUsernameFromId(winner, roomId));
         GameState gameState = gameStateService.getGameState(roomId);
         ClassicPointsUtil.endGameWithWinner(winner, gameState);
         messageService.broadcastMessage(

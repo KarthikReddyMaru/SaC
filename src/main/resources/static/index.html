@@ -65,9 +65,15 @@
                 <input type="text" id="input-username" placeholder="e.g. son" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-700 shadow-inner">
             </div>
 
-            <div>
-                <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Battlefield (Room ID)</label>
-                <input type="text" id="input-room" placeholder="e.g. room123" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-700 shadow-inner">
+            <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Battlefield (Room ID)</label>
+                    <input type="text" id="input-room" placeholder="e.g. room123" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-700 shadow-inner">
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Size</label>
+                    <input type="number" id="input-room-size" value="2" min="2" max="3" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 transition-colors shadow-inner text-center">
+                </div>
             </div>
         </div>
 
@@ -152,12 +158,20 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-4">
+                    <div id="p2-container" class="flex flex-col gap-4">
                         <div class="flex justify-between items-center px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
                             <span id="p2-score" class="font-mono text-xs text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 shadow-inner">0 PTS</span>
                             <span id="p2-name" class="text-sm font-semibold text-red-400">Waiting...</span>
                         </div>
                         <div id="p2-grid" class="grid grid-cols-2 gap-2.5"></div>
+                    </div>
+
+                    <div id="p3-container" class="hidden flex-col gap-4">
+                        <div class="flex justify-between items-center px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
+                            <span id="p3-score" class="font-mono text-xs text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 shadow-inner">0 PTS</span>
+                            <span id="p3-name" class="text-sm font-semibold text-orange-400">Waiting...</span>
+                        </div>
+                        <div id="p3-grid" class="grid grid-cols-2 gap-2.5"></div>
                     </div>
 
                 </div>
@@ -219,10 +233,13 @@
             getUsername: () => { return localStorage.getItem('sac_username') || ""; },
             setRoomId: (room) => { localStorage.setItem('sac_room_id', room); },
             getRoomId: () => { return localStorage.getItem('sac_room_id') || ""; },
+            setRoomSize: (size) => { localStorage.setItem('sac_room_size', size); },
+            getRoomSize: () => { return localStorage.getItem('sac_room_size') || "2"; },
             getClientId: () => _clientId,
             clearSession: () => {
                 localStorage.removeItem('sac_username');
                 localStorage.removeItem('sac_room_id');
+                localStorage.removeItem('sac_room_size');
             }
         };
     })();
@@ -247,15 +264,18 @@
         const emptyPositions = Array(11).fill(null);
         renderGrid('p1-grid', emptyPositions, 'p1');
         renderGrid('p2-grid', emptyPositions, 'p2');
+        renderGrid('p3-grid', emptyPositions, 'p3');
         fetchOnlinePlayers();
 
         // Check for active session and Auto-Reconnect
         const savedUser = IdentityManager.getUsername();
         const savedRoom = IdentityManager.getRoomId();
+        const savedSize = IdentityManager.getRoomSize();
 
         if (savedUser && savedRoom) {
             document.getElementById('input-username').value = savedUser;
             document.getElementById('input-room').value = savedRoom;
+            document.getElementById('input-room-size').value = savedSize;
             showToast("info", "Recovering Active Session...");
             connectToServer();
         }
@@ -279,6 +299,7 @@
     function connectToServer() {
         const user = document.getElementById('input-username').value.trim();
         const room = document.getElementById('input-room').value.trim();
+        const roomSize = document.getElementById('input-room-size').value.trim() || "2";
 
         if (!user || !room) {
             alert("Both Callsign and Battlefield ID are required.");
@@ -287,12 +308,14 @@
 
         IdentityManager.setUsername(user);
         IdentityManager.setRoomId(room);
+        IdentityManager.setRoomSize(roomSize);
 
         let wsHost = window.location.host;
         if (!wsHost) wsHost = 'localhost:80';
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${encodeURIComponent(IdentityManager.getRoomId())}&username=${encodeURIComponent(IdentityManager.getUsername())}&clientId=${encodeURIComponent(IdentityManager.getClientId())}`;
+        // Passing room size in connection string
+        const wsUrl = `${protocol}//${wsHost}/ws/room?roomId=${encodeURIComponent(IdentityManager.getRoomId())}&username=${encodeURIComponent(IdentityManager.getUsername())}&clientId=${encodeURIComponent(IdentityManager.getClientId())}&size=${encodeURIComponent(roomSize)}`;
 
         ws = new WebSocket(wsUrl);
 
@@ -306,12 +329,12 @@
 
             // HOLD PATTERN UI
             const statusEl = document.getElementById('hud-status');
-            statusEl.innerText = "STATUS: AWAITING OPPONENT";
+            statusEl.innerText = "STATUS: AWAITING OPPONENT(S)";
             statusEl.classList.remove('text-zinc-500');
             statusEl.classList.add('text-amber-500', 'animate-pulse');
 
             showToast("success", "Uplink Established. Connected to Server.");
-            updateGuide("Connection secure. The tactical grid will remain locked until the opponent joins the battlefield.");
+            updateGuide("Connection secure. The tactical grid will remain locked until opponents join the battlefield.");
 
             const actionArea = document.getElementById('dynamic-action-area');
             actionArea.innerHTML = `
@@ -339,8 +362,6 @@
                 switch (msg.type) {
                     case "STATE":
                     case "FINISH":
-                        // **ANIMATION PREEMPTION**: If an offline state is detected, instantly kill
-                        // local animations and force a synchronous state lock.
                         if (msg.content && msg.content.gameplayStatus === 'OFFLINE') {
                             isAnimatingRoll = false;
                             pendingGameState = null;
@@ -394,11 +415,6 @@
         location.reload();
     }
 
-
-    // ========================================================
-    // IDLE NUDGE LOGIC
-    // ========================================================
-
     function manageGuideIdleNudge() {
         clearTimeout(guideIdleTimer);
 
@@ -422,7 +438,7 @@
 
     function updateGameState(gameState) {
         try {
-            // 1. Wipe transient targeting flags to guarantee absolute stateless reliance on the server payload
+            // 1. Wipe transient targeting flags
             isWildcardSelecting = false;
             isRevertSelecting = false;
             isCaptureSelecting = false;
@@ -457,9 +473,13 @@
                 }
             }
 
-            // 3. Render Grids
-            const p1 = gameState.players.find(p => p.clientId === IdentityManager.getClientId());
-            const p2 = gameState.players.find(p => p.clientId !== IdentityManager.getClientId());
+            // 3. Render Grids Dynamically for up to 3 players
+            const myClientId = IdentityManager.getClientId();
+            const p1 = gameState.players.find(p => p.clientId === myClientId);
+            const opponents = gameState.players.filter(p => p.clientId !== myClientId);
+
+            const p2 = opponents[0];
+            const p3 = opponents[1];
 
             if (p1) {
                 document.getElementById('p1-score').innerText = p1.points + " PTS";
@@ -470,11 +490,20 @@
                 document.getElementById('p2-score').innerText = p2.points + " PTS";
                 renderGrid('p2-grid', p2.positions, 'p2');
             }
+            if (p3) {
+                document.getElementById('p3-container').classList.remove('hidden');
+                document.getElementById('p3-container').classList.add('flex');
+                document.getElementById('p3-name').innerText = p3.username;
+                document.getElementById('p3-score').innerText = p3.points + " PTS";
+                renderGrid('p3-grid', p3.positions, 'p3');
+            } else {
+                document.getElementById('p3-container').classList.add('hidden');
+                document.getElementById('p3-container').classList.remove('flex');
+            }
 
             if (gameState.gameplayStatus === 'FINISHED') return;
 
-            // 4. Action Area State Routing - Strictly evaluated from pure server state
-
+            // 4. Action Area State Routing
             if (gameState.gameplayStatus === 'OFFLINE') {
                 const actionArea = document.getElementById('dynamic-action-area');
                 actionArea.innerHTML = `
@@ -534,6 +563,7 @@
 
     function renderGrid(containerId, positionsArray, playerKey) {
         const container = document.getElementById(containerId);
+        if(!container) return;
         container.innerHTML = '';
 
         const baseClasses = "w-14 h-14 md:w-16 md:h-16 rounded-xl flex justify-center items-center relative transition-all duration-200 cursor-pointer border shadow-sm";
@@ -566,7 +596,7 @@
             let activeHighlight = "";
             if (globalGameState && globalGameState.state === 'ACTION_REQUIRED' && globalGameState.actionPendingOn === i && globalGameState.gameplayStatus !== 'OFFLINE') {
                 const isCurrentPlayerBoard = (playerKey === 'p1' && globalGameState.currentPlayerId === IdentityManager.getClientId()) ||
-                    (playerKey === 'p2' && globalGameState.currentPlayerId !== IdentityManager.getClientId());
+                    (playerKey !== 'p1' && globalGameState.currentPlayerId !== IdentityManager.getClientId());
 
                 if (isCurrentPlayerBoard) {
                     activeHighlight = " ring-4 ring-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] z-10 scale-[1.05] border-cyan-400 bg-cyan-500/10 ";
@@ -591,8 +621,13 @@
         }
 
         const myClientId = IdentityManager.getClientId();
-        const opponent = globalGameState.players.find(p => p.clientId !== myClientId);
-        const opponentClientId = opponent ? opponent.clientId : null;
+        const opponents = globalGameState.players.filter(p => p.clientId !== myClientId);
+
+        let targetOpponent = null;
+        if (gridId === 'p2') targetOpponent = opponents[0];
+        if (gridId === 'p3') targetOpponent = opponents[1];
+
+        const opponentClientId = targetOpponent ? targetOpponent.clientId : null;
 
         if (isWildcardSelecting && gridId === 'p1') {
             const p1 = globalGameState.players.find(p => p.clientId === myClientId);
@@ -612,19 +647,19 @@
                 }
                 sendActionPayload('REVERT', null, posId, null, myClientId);
             }
-            else if (gridId === 'p2') {
+            else if (targetOpponent) {
                 sendActionPayload('REVERT', posId, null, opponentClientId, null);
             }
         }
-        else if (isCaptureSelecting && gridId === 'p2') {
-            const pos = opponent.positions.find(p => p.positionId === posId);
+        else if (isCaptureSelecting && targetOpponent) {
+            const pos = targetOpponent.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent) {
                 sendActionPayload('CAPTURE', posId, null, opponentClientId, null);
             }
         }
-        else if (isBlackOutSelecting && gridId === 'p2') {
-            const pos = opponent.positions.find(p => p.positionId === posId);
+        else if (isBlackOutSelecting && targetOpponent) {
+            const pos = targetOpponent.positions.find(p => p.positionId === posId);
 
             if (pos && !pos.capturedByOpponent && pos.actor) {
                 sendActionPayload('BLACKOUT', posId, null, opponentClientId, null);
@@ -769,10 +804,8 @@
                         }
                     }
 
-                    // Flush any toasts that came in during the animation
                     pendingToasts.forEach(t => showToast(t.type, t.text));
                     pendingToasts = [];
-
                     manageGuideIdleNudge();
 
                 }, 1000);
@@ -806,10 +839,10 @@
                 }
             }
 
-            const p2Box = document.getElementById(`p2-box-${i}`);
-            if (p2Box) {
-                p2Box.classList.add('cursor-not-allowed', 'opacity-50');
-            }
+            ['p2', 'p3'].forEach((gridId) => {
+                const oppBox = document.getElementById(`${gridId}-box-${i}`);
+                if (oppBox) oppBox.classList.add('cursor-not-allowed', 'opacity-50');
+            });
         }
     }
 
@@ -828,7 +861,7 @@
 
         if (actorType === "RECRUIT") {
             isValidActor = true;
-            updateGuide("Recruit Selected: Promote to a Veteran or Phantom, trigger a Revert, or Drop your turn to hold position! 💥 Revert sacrifices your Recruit to rewind the target's timeline. Example: A tile went Recruit ➔ Veteran ➔ Captured. Revert blasts away 'Captured', reverting it to a Veteran! Hit it again, and the Veteran devolves back to Recruit. The state you blow up is gone forever. Great for liberating your captured bases or demoting enemy Veterans. Handle with care! ⚠️");
+            updateGuide("Recruit Selected: Promote to a Veteran or Phantom, trigger a Revert, or Drop your turn to hold position! 💥 Revert sacrifices your Recruit to rewind the target's timeline.");
             html += `
                 <button onclick="showPromoteOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Promote</button>
                 <button onclick="triggerRevertSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Revert</button>
@@ -896,11 +929,13 @@
                 }
             }
 
-            const p2Box = document.getElementById(`p2-box-${i}`);
-            if(p2Box) {
-                p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
-                p2Box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
-            }
+            ['p2', 'p3'].forEach((gridId) => {
+                const oppBox = document.getElementById(`${gridId}-box-${i}`);
+                if(oppBox) {
+                    oppBox.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                    oppBox.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
+                }
+            });
         }
     }
 
@@ -912,12 +947,12 @@
 
         document.getElementById('dynamic-action-area').innerHTML = `
             <h3 class="text-amber-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
-            <p class="text-[10px] text-zinc-400">Click a pulsing red box on the enemy board.</p>
+            <p class="text-[10px] text-zinc-400">Click a pulsing red box on an enemy board.</p>
             <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
         `;
 
         const myClientId = IdentityManager.getClientId();
-        const opponent = globalGameState.players.find(p => p.clientId !== myClientId);
+        const opponents = globalGameState.players.filter(p => p.clientId !== myClientId);
 
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
@@ -925,16 +960,19 @@
                 p1Box.classList.add('cursor-not-allowed', 'opacity-50');
             }
 
-            const p2Box = document.getElementById(`p2-box-${i}`);
-            if (p2Box && opponent) {
-                const pos = opponent.positions.find(p => p.positionId === i);
-                if (pos && !pos.capturedByOpponent) {
-                    p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
-                    p2Box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
-                } else {
-                    p2Box.classList.add('cursor-not-allowed', 'opacity-50');
+            ['p2', 'p3'].forEach((gridId, idx) => {
+                const box = document.getElementById(`${gridId}-box-${i}`);
+                const opp = opponents[idx];
+                if (box && opp) {
+                    const pos = opp.positions.find(p => p.positionId === i);
+                    if (pos && !pos.capturedByOpponent) {
+                        box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                        box.classList.add('ring-2', 'ring-red-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(239,68,68,0.4)]', 'cursor-crosshair', 'border-red-500');
+                    } else {
+                        box.classList.add('cursor-not-allowed', 'opacity-50');
+                    }
                 }
-            }
+            });
         }
     }
 
@@ -946,12 +984,12 @@
 
         document.getElementById('dynamic-action-area').innerHTML = `
             <h3 class="text-purple-400 font-bold mb-2 text-sm uppercase tracking-widest">Select Target</h3>
-            <p class="text-[10px] text-zinc-400">Click a pulsing purple box on the enemy board.</p>
+            <p class="text-[10px] text-zinc-400">Click a pulsing purple box on an enemy board.</p>
             <button onclick="updateGameState(globalGameState)" class="mt-4 text-xs text-zinc-500 hover:text-zinc-300 underline">Cancel</button>
         `;
 
         const myClientId = IdentityManager.getClientId();
-        const opponent = globalGameState.players.find(p => p.clientId !== myClientId);
+        const opponents = globalGameState.players.filter(p => p.clientId !== myClientId);
 
         for(let i=1; i<=10; i++) {
             const p1Box = document.getElementById(`p1-box-${i}`);
@@ -959,16 +997,19 @@
                 p1Box.classList.add('cursor-not-allowed', 'opacity-50');
             }
 
-            const p2Box = document.getElementById(`p2-box-${i}`);
-            if (p2Box && opponent) {
-                const pos = opponent.positions.find(p => p.positionId === i);
-                if (pos && !pos.capturedByOpponent && pos.actor) {
-                    p2Box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
-                    p2Box.classList.add('ring-2', 'ring-purple-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(168,85,247,0.4)]', 'cursor-crosshair', 'border-purple-500');
-                } else {
-                    p2Box.classList.add('cursor-not-allowed', 'opacity-50');
+            ['p2', 'p3'].forEach((gridId, idx) => {
+                const box = document.getElementById(`${gridId}-box-${i}`);
+                const opp = opponents[idx];
+                if (box && opp) {
+                    const pos = opp.positions.find(p => p.positionId === i);
+                    if (pos && !pos.capturedByOpponent && pos.actor) {
+                        box.classList.remove('border-zinc-800', 'border-red-500/30', 'border-emerald-500/30', 'border-amber-500/30', 'border-cyan-400');
+                        box.classList.add('ring-2', 'ring-purple-500/70', 'animate-pulse', 'z-20', 'shadow-[0_0_10px_rgba(168,85,247,0.4)]', 'cursor-crosshair', 'border-purple-500');
+                    } else {
+                        box.classList.add('cursor-not-allowed', 'opacity-50');
+                    }
                 }
-            }
+            });
         }
     }
 
@@ -1019,9 +1060,8 @@
     function showToast(type, text) {
         const container = document.getElementById('toast-container');
 
-        // Allow up to 4 toasts to stack before removing oldest
         if (container.children.length >= 4) {
-            container.removeChild(container.lastChild); // Remove from the bottom of the reversed flex list
+            container.removeChild(container.lastChild);
         }
 
         let colorClass = "bg-zinc-800/90 border-zinc-700 text-zinc-200";
@@ -1047,7 +1087,6 @@
         textNode.className = "leading-relaxed break-words";
         toast.appendChild(textNode);
 
-        // Prepend because we are using flex-col-reverse, this makes it pop at the bottom
         container.prepend(toast);
 
         requestAnimationFrame(() => {
@@ -1124,7 +1163,16 @@
 
     function showGameOverScreen(gameState) {
         document.getElementById('game-over-overlay').classList.remove('hidden');
-        const winnerText = gameState.winner ? `Winner: ${gameState.winner}` : "Draw / Disconnected";
+
+        let winnerName = gameState.winner;
+        if (gameState.winner && gameState.players) {
+            const winnerPlayer = gameState.players.find(p => p.clientId === gameState.winner);
+            if (winnerPlayer) {
+                winnerName = winnerPlayer.username;
+            }
+        }
+
+        const winnerText = winnerName ? `Winner: ${winnerName}` : "Draw / Disconnected";
         document.getElementById('winner-text').innerText = winnerText;
 
         IdentityManager.clearSession();
@@ -1138,12 +1186,14 @@
 
         const myClientId = IdentityManager.getClientId();
         const dummyOpponentId = "mock-opponent-id-999";
+        const dummyOpponent2Id = "mock-opponent-id-888";
 
-        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"RECRUIT","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":myClientId,"actor":{"currentState":"RECRUIT"},"capturedByOpponent":false},{"positionId":4,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":myClientId,"actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","clientId":myClientId,"points":3},{"positions":[{"positionId":0,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":dummyOpponentId,"actor":{"currentState":"RECRUIT"},"capturedByOpponent":false}],"username":"ryomen","clientId":dummyOpponentId,"points":5}],"playerCount":2,"currentPlayerId":myClientId,"actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
+        // Modified payload to simulate 3 players for debugging
+        const dummyPayload = {"roomId":"room123","state":"ACTION_REQUIRED","actionPendingOnActor":"RECRUIT","actionPendingOn":3,"players":[{"positions":[{"positionId":0,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":myClientId,"actor":{"currentState":"RECRUIT"},"capturedByOpponent":false},{"positionId":4,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":myClientId,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":myClientId,"actor":{"currentState":"PHANTOM"},"capturedByOpponent":false}],"username":"son","clientId":myClientId,"points":3},{"positions":[{"positionId":0,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":true},{"positionId":4,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":dummyOpponentId,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":dummyOpponentId,"actor":{"currentState":"RECRUIT"},"capturedByOpponent":false}],"username":"ryomen","clientId":dummyOpponentId,"points":5},{"positions":[{"positionId":0,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":1,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":2,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":3,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":4,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":5,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":6,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":7,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":8,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":9,"belongsTo":dummyOpponent2Id,"actor":null,"capturedByOpponent":false},{"positionId":10,"belongsTo":dummyOpponent2Id,"actor":{"currentState":"VETERAN"},"capturedByOpponent":false}],"username":"gojo","clientId":dummyOpponent2Id,"points":4}],"playerCount":3,"currentPlayerId":myClientId,"actionPending":true,"status":"PLAYING","gameMode":"CLASSIC_POINTS","positionSelection":"ROLL"};
 
         globalGameState = dummyPayload;
         updateGameState(dummyPayload);
-        showToast("info", "Test State JSON Loaded.");
+        showToast("info", "Test State JSON Loaded (3-Player Simulation).");
     }
 
     function testSendPosition() {

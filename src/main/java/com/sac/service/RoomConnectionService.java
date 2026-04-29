@@ -60,4 +60,9 @@ public class RoomConnectionService {
     public boolean isEveryPlayerOnline(String roomId) {
         return getPlayers(roomId).stream().allMatch(this.userRegistry::containsKey);
     }
+
+    public boolean isAnyPlayerOnline(String roomId) {
+        return getPlayers(roomId).stream().anyMatch(this.userRegistry::containsKey);
+    }
+
 }

@@ -40,4 +40,15 @@ public class SocketSessionUtil {
     public static String getGameMode(WebSocketSession webSocketSession) {
         return getQueryParamValue(webSocketSession, "mode");
     }
+
+    public static int getRoomSizeFromSession(WebSocketSession webSocketSession) {
+        try {
+            Integer size = Integer.parseInt(Objects.requireNonNull(getQueryParamValue(webSocketSession, "size")));
+            if (size.compareTo(3) >= 0)
+                return 3;
+            return Math.min(2, size);
+        } catch (Exception e) {
+            return 2;
+        }
+    }
 }
