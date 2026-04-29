@@ -5,9 +5,12 @@ import com.sac.model.GameState;
 import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import com.sac.util.mode.ClassicPointsUtil;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,6 +33,7 @@ public class GameplayService {
     private final RoomConnectionService roomConnectionService;
     private final GameStateService gameStateService;
     private final MessageService messageService;
+    private final MeterRegistry meterRegistry;
 
     private final Map<String, ScheduledFuture<?>> timers = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(4);
@@ -101,6 +105,7 @@ public class GameplayService {
             ClassicPointsUtil.transitionRollToNextPlayer(gameState);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
             log.info("GameState is broadcasted");
+            log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
         }
     }
 
@@ -147,8 +152,15 @@ public class GameplayService {
     }
 
     @PreDestroy
-    public void shutdown() {
+    private void shutdown() {
         scheduledExecutorService.shutdown();
+    }
+
+    @PostConstruct
+    private void initMetrics() {
+        Gauge.builder("Sac.active.timers", timers, Map::size)
+                .description("Number of game states about to be removed")
+                .register(meterRegistry);
     }
 
 }

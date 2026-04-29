@@ -5,21 +5,21 @@ import com.sac.model.GameState;
 import com.sac.model.GameState.Player;
 import com.sac.model.Position;
 import com.sac.strategy.position.PositionSelection;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-import static com.sac.model.GameState.GameplayStatus;
 import static com.sac.model.GameState.GameplayStatus.INIT;
 import static com.sac.model.GameState.State.ROLL;
 
@@ -28,9 +28,10 @@ import static com.sac.model.GameState.State.ROLL;
 @RequiredArgsConstructor
 public class GameStateService {
 
-    private final ConcurrentHashMap<String, GameState> gameStates = new ConcurrentHashMap<>();
     @Value("${player.total_positions}")
     private int playerPositions;
+    private final ConcurrentHashMap<String, GameState> gameStates = new ConcurrentHashMap<>();
+    private final MeterRegistry meterRegistry;
 
     public GameState initializeGameState(String roomId, GameMode gameMode, Integer totalPlayers) {
         return gameStates.computeIfAbsent(roomId, id -> {
@@ -71,13 +72,6 @@ public class GameStateService {
                           return new Player(positions, metadata.username, metadata.clientId, 0);
                       })
                       .collect(Collectors.toList());
-    }
-
-    private ArrayDeque<Player> initializeTurnOrder(GameState gameState) {
-        List<Player> players = gameState.getPlayers();
-        ArrayDeque<Player> turnOrder = new ArrayDeque<>();
-        players.forEach(turnOrder::addLast);
-        return turnOrder;
     }
 
     public GameState getGameState(String roomId) {
@@ -139,5 +133,12 @@ public class GameStateService {
     public static class PlayerMetadata {
         private String username;
         private String clientId;
+    }
+
+    @PostConstruct
+    public void initMetric() {
+        Gauge.builder("SaC.rooms.active", gameStates, ConcurrentHashMap::size)
+                .description("Current number of active game state rooms")
+                .register(meterRegistry);
     }
 }

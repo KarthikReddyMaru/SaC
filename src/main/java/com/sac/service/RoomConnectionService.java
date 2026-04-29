@@ -1,6 +1,9 @@
 package com.sac.service;
 
 import com.sac.model.GameState;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +24,7 @@ public class RoomConnectionService {
     @Getter
     private final Map<String, WebSocketSession> userRegistry = new ConcurrentHashMap<>();
     private final GameStateService gameStateService;
+    private final MeterRegistry meterRegistry;
 
     public Set<WebSocketSession> getSessions(String roomId) {
         return getPlayers(roomId)
@@ -63,6 +67,13 @@ public class RoomConnectionService {
 
     public boolean isAnyPlayerOnline(String roomId) {
         return getPlayers(roomId).stream().anyMatch(this.userRegistry::containsKey);
+    }
+
+    @PostConstruct
+    public void initMetric() {
+        Gauge.builder("SaC.users.active", userRegistry, Map::size)
+             .description("Current number of active users")
+             .register(meterRegistry);
     }
 
 }

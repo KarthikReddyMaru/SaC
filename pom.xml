@@ -74,6 +74,11 @@
             <version>2.27.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-otlp</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
