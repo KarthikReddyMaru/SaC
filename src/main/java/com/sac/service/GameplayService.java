@@ -120,15 +120,17 @@ public class GameplayService {
         if (!winner.equals("NONE"))
             log.info("Game completed, Winner: {}", gameStateService.getUsernameFromId(winner, roomId));
         GameState gameState = gameStateService.getGameState(roomId);
-        ClassicPointsUtil.endGameWithWinner(winner, gameState);
-        messageService.broadcastMessage(
-                MessageFormat.endGameWithWinner(gameState), roomId);
-        gameState.getPlayers()
-                 .stream()
-                 .map(GameState.Player::getClientId)
-                 .forEach(roomConnectionService::closePlayerSession);
-        gameStateService.removeGameState(roomId);
-        log.info("GameState of {} - {}", roomId, gameStateService.getGameState(roomId));
+        if (gameState != null) {
+            ClassicPointsUtil.endGameWithWinner(winner, gameState);
+            messageService.broadcastMessage(
+                    MessageFormat.endGameWithWinner(gameState), roomId);
+            gameState.getPlayers()
+                     .stream()
+                     .map(GameState.Player::getClientId)
+                     .forEach(roomConnectionService::closePlayerSession);
+            gameStateService.removeGameState(roomId);
+            log.info("GameState of {} - {}", roomId, gameStateService.getGameState(roomId));
+        }
     }
 
     public void startTimer(String clientId, String roomId) {

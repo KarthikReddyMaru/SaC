@@ -84,7 +84,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                .getActor();
         if (actor != null) {
             String errorMsg = "An actor already present in this position, choose different action";
-            messageService.sendSystemMessage(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError(errorMsg));
             log.warn(errorMsg);
             return false;
 
@@ -138,7 +138,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         } else if (actionContext.getSourcePosition() != null && gameState.getActionPendingOn()
                                                                          .equals(actionContext.getSourcePosition())) {
             String msg = "You cannot perform Revert on the same position";
-            messageService.sendSystemMessage(webSocketSession, msg);
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError(msg));
             log.warn(msg);
             return false;
         }
@@ -167,7 +167,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             return false;
         } else if (requestedTransition == null) {
             String msg = "Choose Specialization to evolve";
-            messageService.sendSystemMessage(webSocketSession, MessageFormat.systemError(msg));
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError(msg));
             log.warn(msg);
             return false;
         } else if (!actor.getAllowedTransitions(this.getMode())
@@ -175,7 +175,7 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
                                                                 .equals(requestedTransition)) {
             String errorMessage = String.format("%s cannot PROMOTE to %s", actor.getCurrentState(),
                                                 requestedTransition);
-            messageService.sendSystemMessage(webSocketSession, MessageFormat.systemError(errorMessage));
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError(errorMessage));
             log.warn(errorMessage);
             return false;
         }

@@ -31,20 +31,6 @@ public class MessageService {
         }
     }
 
-    public void broadcastMessage(String message, String roomId, ServerResponse.Type type) {
-        Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
-        for (WebSocketSession session : sessions) {
-            if (session.isOpen()) {
-                try {
-                    String response = objectMapper.writeValueAsString(new ServerResponse(type, "System", message));
-                    session.sendMessage(new TextMessage(response));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-    }
-
     public void sendMessage(WebSocketSession senderSession, String message, String roomId) throws IOException {
         Set<WebSocketSession> sessions = roomConnectionService.getSessions(roomId);
         String username = SocketSessionUtil.getUserNameFromSession(senderSession);
@@ -77,14 +63,4 @@ public class MessageService {
         }
     }
 
-    public void sendSystemMessage(WebSocketSession session, String message, ServerResponse.Type type) {
-        if (session.isOpen()) {
-            ServerResponse response = new ServerResponse(type, "System", message);
-            try {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 }

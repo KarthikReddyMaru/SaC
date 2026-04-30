@@ -9,6 +9,7 @@ import com.sac.model.message.ServerResponse;
 import com.sac.service.GameStateService;
 import com.sac.service.MessageService;
 import com.sac.strategy.mode.Mode;
+import com.sac.util.MessageFormat;
 import com.sac.util.SocketSessionUtil;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -45,8 +46,7 @@ public class ActionEnvelopeHandler implements EnvelopeHandler {
             setSpanAttributes(Span.current(), actionContext);
             mode.performAction(webSocketSession, actionContext, roomId);
         } else
-            messageService.sendSystemMessage(webSocketSession, "Game not initialized yet",
-                                             ServerResponse.Type.ERROR);
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError("Game not initialized yet"));
 
     }
 
