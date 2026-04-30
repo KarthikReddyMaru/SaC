@@ -133,7 +133,7 @@ public class GameplayService {
         }
     }
 
-    public void startTimer(String clientId, String roomId) {
+    private void startTimer(String clientId, String roomId) {
         ScheduledFuture<?> scheduledFuture = scheduledExecutorService.schedule(() -> {
             if (timers.remove(clientId) == null) {
                 log.info("Looks like {} re-joined, {} is alive",
@@ -148,7 +148,7 @@ public class GameplayService {
         log.warn("Timer started to clear gameState");
     }
 
-    public boolean endTimer(String clientId, String roomId) {
+    private boolean endTimer(String clientId, String roomId) {
         ScheduledFuture<?> scheduledFuture = timers.remove(clientId);
         String username = gameStateService.getUsernameFromId(clientId, roomId);
         if (scheduledFuture == null) {

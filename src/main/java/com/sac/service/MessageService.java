@@ -42,17 +42,6 @@ public class MessageService {
         }
     }
 
-    public void sendSystemMessage(WebSocketSession session, String message) {
-        if (session.isOpen()) {
-            ServerResponse response = new ServerResponse(ServerResponse.Type.MESSAGE, "System", message);
-            try {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
     public void sendRawPayload(WebSocketSession session, String message) {
         if (session.isOpen()) {
             try {

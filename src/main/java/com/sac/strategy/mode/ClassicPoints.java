@@ -7,7 +7,6 @@ import com.sac.model.message.ActionContext;
 import com.sac.model.message.PositionContext;
 import com.sac.service.GameStateService;
 import com.sac.service.GameplayService;
-import com.sac.service.MessageService;
 import com.sac.strategy.action.Action;
 import com.sac.strategy.position.Roll;
 import com.sac.util.SocketSessionUtil;
@@ -71,7 +70,7 @@ public class ClassicPoints implements Mode {
     }
 
     @Override @WithSpan("mode.action")
-    public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) throws IOException {
+    public void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) {
         Action action = actionHandlerRegistry.getInstance(actionContext.getGameAction());
         if (action.preAction(classicPointsPreActionVisitor, webSocketSession, actionContext)) {
             action.performAction(webSocketSession, actionContext, roomId);

@@ -12,6 +12,6 @@ public interface Mode {
     String computeWinner(String roomId);
     GameMode getMode();
 
-    default void performChoose(WebSocketSession webSocketSession, PositionContext message) throws IOException {}
-    default void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId) throws IOException {}
+    void performChoose(WebSocketSession webSocketSession, PositionContext message) throws IOException;
+    void performAction(WebSocketSession webSocketSession, ActionContext actionContext, String roomId);
 }

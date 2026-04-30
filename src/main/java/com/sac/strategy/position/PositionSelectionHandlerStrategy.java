@@ -11,7 +11,5 @@ public interface PositionSelectionHandlerStrategy {
     void handle(WebSocketSession webSocketSession, PositionContext message, String roomId) throws IOException;
     PositionSelection getPositionSelectionType();
 
-    default boolean preChoose(PreChooseVisitor preChooseVisitor, WebSocketSession webSocketSession, PositionContext message) {
-        return false;
-    }
+    boolean preChoose(PreChooseVisitor preChooseVisitor, WebSocketSession webSocketSession, PositionContext message);
 }
