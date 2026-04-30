@@ -1,5 +1,6 @@
 package com.sac.visitor.postaction;
 
+import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.message.ActionContext;
 import com.sac.service.GameStateService;
@@ -15,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import static com.sac.model.GameMode.CLASSIC_POINTS;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -24,6 +27,11 @@ public class ClassicPointsPostActionVisitor implements PostActionVisitor {
     private final PointsService pointsService;
     private final GameStateService gameStateService;
     private final MessageService messageService;
+
+    @Override
+    public GameMode getMode() {
+        return CLASSIC_POINTS;
+    }
 
     @Override @WithSpan("postaction.dtop")
     public void visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {

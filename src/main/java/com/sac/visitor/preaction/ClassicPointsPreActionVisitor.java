@@ -1,5 +1,7 @@
 package com.sac.visitor.preaction;
 
+import com.sac.config.actor.ActorEvolutionConfig;
+import com.sac.model.GameMode;
 import com.sac.model.GameState;
 import com.sac.model.Position;
 import com.sac.model.actor.Actor;
@@ -19,8 +21,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import static com.sac.model.GameMode.CLASSIC_POINTS;
 import static com.sac.model.GameState.GameplayStatus.INIT;
 import static com.sac.model.GameState.GameplayStatus.OFFLINE;
+import static com.sac.model.actor.Specialization.RECRUIT;
 
 @Slf4j
 @Component
@@ -35,6 +39,11 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
     private int maxPositionPerPlayer;
 
     @Override
+    public GameMode getMode() {
+        return CLASSIC_POINTS;
+    }
+
+    @Override
     @WithSpan("preaction.drop")
     public boolean visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext) {
 
@@ -44,28 +53,10 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         addActionContextToSpanAttributes(actionContext);
 
-        if (isActionIllegal(webSocketSession, clientId, gameState)) return false;
-
-        Integer sourcePositionId = gameState.getActionPendingOn();
-        Position sourcePosition = gameState.getPlayerPosition(clientId, sourcePositionId);
-
-        if (sourcePosition.getActor() == null) {
-            messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(sourcePositionId));
-            return false;
-        } else if (!sourcePosition.getActor()
-                                  .getAllowedActions()
-                                  .contains(drop.getActionType())) {
-            messageService.sendRawPayload(webSocketSession,
-                                          MessageFormat.actorCannotPerform(
-                                                  sourcePosition.getActor()
-                                                                .getCurrentState(),
-                                                  drop.getActionType()));
-            log.warn("{} cannot perform drop", sourcePosition.getActor()
-                                                             .getCurrentState());
-            return false;
-        }
-
-        return true;
+        boolean flag =  gameState.getCurrentPlayerId().equals(clientId);
+        if (!flag)
+            log.warn("Cannot drop turn when it is not yours");
+        return flag;
     }
 
     @Override
@@ -80,15 +71,23 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         if (isActionIllegal(webSocketSession, clientId, gameState)) {
             return false;
-        } else {
-            Actor actor = gameState.getPlayerPosition(clientId, gameState.getActionPendingOn())
-                                   .getActor();
-            if (actor != null) {
-                String errorMsg = "An actor already present in this position, choose different action";
-                messageService.sendSystemMessage(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
-                log.warn(errorMsg);
-                return false;
-            }
+        }
+
+        if (!actionContext.getSpecialization().equals(RECRUIT)) {
+            String msg = "Cannot spawn this unit now";
+            messageService.sendRawPayload(webSocketSession, MessageFormat.systemError(msg));
+            log.warn(msg);
+            return false;
+        }
+
+        Actor actor = gameState.getPlayerPosition(clientId, gameState.getActionPendingOn())
+                               .getActor();
+        if (actor != null) {
+            String errorMsg = "An actor already present in this position, choose different action";
+            messageService.sendSystemMessage(webSocketSession, errorMsg, ServerResponse.Type.ERROR);
+            log.warn(errorMsg);
+            return false;
+
         }
         return true;
     }
@@ -126,8 +125,9 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         if (actor == null) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.noActorPresent(gameState.getActionPendingOn()));
+            log.warn("No actor present at {}", gameState.getActionPendingOn());
             return false;
-        } else if (!actor.getAllowedActions()
+        } else if (!actor.getAllowedActions(this.getMode())
                          .contains(actionContext.getGameAction())) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.actorCannotPerform(actor.getCurrentState(),
                                                                                              actionContext.getGameAction()));
@@ -145,7 +145,8 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         return true;
     }
 
-    @Override @WithSpan("preaction.promote")
+    @Override
+    @WithSpan("preaction.promote")
     public boolean visit(Promote promote, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -162,13 +163,14 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
 
         if (actor == null) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(position.getPositionId()));
+            log.warn("No actor present at {}", gameState.getActionPendingOn());
             return false;
         } else if (requestedTransition == null) {
             String msg = "Choose Specialization to evolve";
             messageService.sendSystemMessage(webSocketSession, MessageFormat.systemError(msg));
             log.warn(msg);
             return false;
-        } else if (!actor.getAllowedTransitions()
+        } else if (!actor.getAllowedTransitions(this.getMode())
                          .contains(requestedTransition) || actor.getCurrentState()
                                                                 .equals(requestedTransition)) {
             String errorMessage = String.format("%s cannot PROMOTE to %s", actor.getCurrentState(),
@@ -180,7 +182,8 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         return true;
     }
 
-    @Override @WithSpan("preaction.capture")
+    @Override
+    @WithSpan("preaction.capture")
     public boolean visit(Capture capture, WebSocketSession webSocketSession,
                          ActionContext actionContext) {
 
@@ -205,13 +208,16 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         if (actor == null) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.noActorPresent(playerPosition.getPositionId()));
+            log.warn("No actor present at {}", playerPositionId);
             return false;
-        } else if (!actor.getAllowedActions()
+        } else if (!actor.getAllowedActions(this.getMode())
                          .contains(capture.getActionType())) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.actorCannotPerform(actor.getCurrentState(),
                                                                            capture.getActionType()));
-            log.warn("{} cannot perform {}", actor.getCurrentState().name(), capture.getActionType().name());
+            log.warn("{} cannot perform {}", actor.getCurrentState()
+                                                  .name(), capture.getActionType()
+                                                                  .name());
             return false;
         } else if (opponentPosition.isCapturedByOpponent()) {
             messageService.sendRawPayload(webSocketSession,
@@ -222,7 +228,8 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
         return true;
     }
 
-    @Override @WithSpan("preaction.blackout")
+    @Override
+    @WithSpan("preaction.blackout")
     public boolean visit(BlackOut blackOut, WebSocketSession webSocketSession, ActionContext actionContext) {
 
         String roomId = SocketSessionUtil.getRoomIdFromSession(webSocketSession);
@@ -249,13 +256,16 @@ public class ClassicPointsPreActionVisitor implements PreActionVisitor {
             return false;
         } else if (currentPlayerPositionActor == null) {
             messageService.sendRawPayload(webSocketSession, MessageFormat.noActorPresent(sourcePositionId));
+            log.warn("No actor present at {}", sourcePositionId);
             return false;
-        } else if (!currentPlayerPositionActor.getAllowedActions()
+        } else if (!currentPlayerPositionActor.getAllowedActions(this.getMode())
                                               .contains(blackOut.getActionType())) {
             messageService.sendRawPayload(webSocketSession,
                                           MessageFormat.actorCannotPerform(currentPlayerPositionActor.getCurrentState(),
                                                                            blackOut.getActionType()));
-            log.warn("{} cannot perform {}", currentPlayerPositionActor.getCurrentState().name(), blackOut.getActionType().name());
+            log.warn("{} cannot perform {}", currentPlayerPositionActor.getCurrentState()
+                                                                       .name(), blackOut.getActionType()
+                                                                                        .name());
             return false;
         }
         return true;

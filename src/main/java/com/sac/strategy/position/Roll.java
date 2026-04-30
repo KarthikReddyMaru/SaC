@@ -27,8 +27,6 @@ public class Roll implements PositionSelectionHandlerStrategy {
     private final GameStateService gameStateService;
     private final MessageService messageService;
 
-    private final Spawn spawn;
-
     @Override @WithSpan("roll.handle")
     public void handle(WebSocketSession webSocketSession, PositionContext message, String roomId) throws IOException {
 
@@ -38,6 +36,7 @@ public class Roll implements PositionSelectionHandlerStrategy {
         Position position = gameState.getPlayerPosition(currentPlayer, positionId);
 
         if (position.isCapturedByOpponent()) {
+
             String capturedPlayerId = position.getBelongsTo();
             String capturedPlayerUsername = gameStateService.getUsernameFromId(capturedPlayerId, roomId);
             messageService.broadcastMessage(MessageFormat.capturedTrouble(capturedPlayerUsername, positionId), roomId);
@@ -48,21 +47,13 @@ public class Roll implements PositionSelectionHandlerStrategy {
             log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
             Span.current().addEvent("captured_territory").setAttribute("position", message.getPosition());
 
-        } else if (position.getActor() == null) {
-            ClassicPointsUtil.requirePlayerAction(currentPlayer, gameState, positionId);
-            spawn.performAction(webSocketSession, null, roomId);
-            ClassicPointsUtil.transitionRollToNextPlayer(gameState);
-            messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
-            log.info("Transitioned roll to {}", gameStateService.getUsernameFromId(gameState.getCurrentPlayerId(), roomId));
-            Span.current().addEvent("empty_territory").setAttribute("position", message.getPosition());
-
-
         } else {
+
             ClassicPointsUtil.requirePlayerAction(currentPlayer, gameState, positionId);
             messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
 
             log.info("Player landed on owned territory, ACTION_REQUIRED at {}", message.getPosition());
-            Span.current().addEvent("empty_territory").setAttribute("position", message.getPosition());
+            Span.current().addEvent("owned_territory").setAttribute("position", message.getPosition());
 
         }
     }

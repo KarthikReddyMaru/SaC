@@ -39,7 +39,7 @@ public class Spawn implements Action {
         GameState gameState = gameStateService.getGameState(roomId);
         Integer playerPositionId = gameState.getActionPendingOn();
         Position position = gameState.getPlayerPosition(playerId, playerPositionId);
-        Actor actor = ActorFactory.getInstance(Specialization.RECRUIT);
+        Actor actor = ActorFactory.getInstance(actionContext.getSpecialization());
         position.setActor(actor);
 
         log.info("SPAWNED {} at {}", position.getActor().getCurrentState().name(), position.getPositionId());

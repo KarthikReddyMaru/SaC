@@ -1,10 +1,13 @@
 package com.sac.visitor.postaction;
 
+import com.sac.model.GameMode;
 import com.sac.model.message.ActionContext;
 import com.sac.strategy.action.*;
 import org.springframework.web.socket.WebSocketSession;
 
 public interface PostActionVisitor {
+
+    GameMode getMode();
 
     void visit(Drop drop, WebSocketSession webSocketSession, ActionContext actionContext);
     void visit(Spawn spawn, WebSocketSession webSocketSession, ActionContext actionContext);

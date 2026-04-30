@@ -37,7 +37,6 @@ public class ClassicPoints implements Mode {
 
     private final ActionHandlerRegistry actionHandlerRegistry;
     private final GameStateService gameStateService;
-    private final MessageService messageService;
     private final Roll roll;
 
     private final ClassicPointsPreChooseVisitor classicPointsPreChooseVisitor;
