@@ -48,8 +48,6 @@
 
 <body class="bg-zinc-950 text-zinc-100 font-sans h-screen overflow-hidden selection:bg-blue-500/30 relative">
 
-<div id="toast-container" class="fixed bottom-6 left-6 z-50 flex flex-col-reverse items-start gap-2 pointer-events-none"></div>
-
 <div id="login-screen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950">
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col gap-6">
 
@@ -57,6 +55,8 @@
             <h1 class="text-2xl font-bold tracking-widest text-zinc-100 uppercase">SaC Arena</h1>
             <p class="text-xs text-zinc-500 tracking-widest uppercase">Tactical Command</p>
         </div>
+
+        <div id="login-warning" class="hidden bg-red-900/20 border border-red-800/50 text-red-400 text-xs px-4 py-2.5 rounded-lg text-center font-medium shadow-inner"></div>
 
         <div id="online-badge" class="hidden bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-3 py-1.5 rounded-full w-fit mx-auto flex items-center gap-2 shadow-inner uppercase tracking-wider">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
@@ -86,6 +86,20 @@
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(0,0,0,0.8)]">
         <h2 class="text-3xl font-bold text-amber-500 mb-2 uppercase tracking-widest">GAME OVER</h2>
         <p id="winner-text" class="text-lg text-zinc-300 mb-6 font-mono"></p>
+
+        <!-- Dynamic Score Overview -->
+        <div class="flex justify-between items-center bg-zinc-950 border border-zinc-800 rounded-xl p-4 mb-6 shadow-inner">
+            <div class="flex flex-col items-center w-1/3">
+                <span id="go-my-name" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-1 truncate w-full text-center">You</span>
+                <span id="go-my-score" class="text-2xl font-mono text-zinc-100">0</span>
+            </div>
+            <div class="text-zinc-600 font-bold text-xs uppercase tracking-widest w-1/3">VS</div>
+            <div class="flex flex-col items-center w-1/3">
+                <span id="go-opp-name" class="text-[10px] text-red-400 font-bold uppercase tracking-widest mb-1 truncate w-full text-center">Opponent</span>
+                <span id="go-opp-score" class="text-2xl font-mono text-zinc-100">0</span>
+            </div>
+        </div>
+
         <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition w-full">Return to Headquarters</button>
     </div>
 </div>
@@ -124,7 +138,12 @@
 
     <div class="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
 
-        <main class="flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
+        <!-- Made this main container relative to house the absolute toast container -->
+        <main class="relative flex-1 min-w-0 bg-zinc-900/40 border border-zinc-800 rounded-xl flex flex-col shadow-[inset_0_0_50px_rgba(0,0,0,0.2)] overflow-hidden">
+
+            <!-- Toast container moved inside the board layout, positioned top-left -->
+            <div id="toast-container" class="absolute top-4 left-4 z-50 flex flex-col items-start gap-2 pointer-events-none"></div>
+
             <div class="flex-1 overflow-x-auto overflow-y-auto flex justify-center items-center p-4">
                 <div class="flex items-stretch gap-4 md:gap-8 min-w-max py-4">
 
@@ -203,6 +222,7 @@
     let ws;
     let isGuideEnabled = true; // Guide ON by default
     let guideIdleTimer = null;
+    let offlineTimerInterval = null; // Used to handle the 60 sec disconnected countdown
 
     let myRollRequestPending = false;
     let pendingToasts = [];
@@ -253,18 +273,15 @@
     // SVG Generator for Roles (Recruit, Veteran, Phantom)
     function getRoleSvg(role) {
         if (role === "RECRUIT") {
-            // A simple upwards chevron indicating base rank
             return `<svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
                     </svg>`;
         } else if (role === "PHANTOM") {
-            // A stealthy eye/mask indicating evasion and blackout capabilities
             return `<svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>`;
         } else if (role === "VETERAN") {
-            // Crossed swords indicating combat mastery and capture ability
             return `<svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21L21 7M3 14l7 7M10 3l11 11M3 3l18 18" />
                     </svg>`;
@@ -279,14 +296,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>`;
         }
-
-        // Blank dice face for Wildcard
         if (val === '') {
             return `<svg class="w-full h-full text-amber-500/50" viewBox="0 0 24 24">
                         <rect x="2" y="2" width="20" height="20" rx="4" fill="transparent" stroke="currentColor" stroke-width="2"/>
                     </svg>`;
         }
-
         const dotsMapping = {
             1: [{cx:12, cy:12}],
             2: [{cx:7, cy:7}, {cx:17, cy:17}],
@@ -358,6 +372,8 @@
             alert("Both Callsign and Battlefield ID are required.");
             return;
         }
+
+        document.getElementById('login-warning').classList.add('hidden');
 
         IdentityManager.setUsername(user);
         IdentityManager.setRoomId(room);
@@ -451,8 +467,18 @@
         };
 
         ws.onclose = () => {
+            // Throw user back into the login screen with a warning
+            // We DO NOT clear the local storage identity manager here.
+            document.getElementById('game-ui').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('flex');
+            document.getElementById('login-screen').classList.remove('hidden');
+
+            const loginWarning = document.getElementById('login-warning');
+            loginWarning.innerText = "Connection lost. Please establish uplink again.";
+            loginWarning.classList.remove('hidden');
+
             showToast("error", "Connection to Server Lost.");
-            updateGuide("Connection severed. Please refresh to reconnect.");
+            updateGuide("Connection severed. Please attempt to reconnect.");
         };
     }
 
@@ -482,6 +508,12 @@
 
     function updateGameState(gameState) {
         try {
+            // Clear the 60sec interval if state changes to anything else
+            if (offlineTimerInterval) {
+                clearInterval(offlineTimerInterval);
+                offlineTimerInterval = null;
+            }
+
             isWildcardSelecting = false;
             isRevertSelecting = false;
             isCaptureSelecting = false;
@@ -537,13 +569,27 @@
                         <svg class="w-8 h-8 text-red-500/80 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3"></path>
                         </svg>
-                        <div class="flex flex-col gap-1">
-                            <span class="text-xs text-red-500 font-bold uppercase tracking-widest animate-pulse">Signal Lost</span>
+                        <div class="flex flex-col gap-1 items-center">
+                            <span class="text-xs text-red-500 font-bold uppercase tracking-widest animate-pulse">Signal Lost Reconnecting...</span>
                             <span class="text-[10px] text-zinc-500 uppercase tracking-wide">Awaiting Enemy Recon...</span>
+                            <span id="offline-countdown" class="text-2xl font-mono font-bold text-red-400 mt-2">59s</span>
                         </div>
                     </div>
                 `;
                 updateGuide("WARNING: Enemy signal lost. Grid operations suspended until reconnection.");
+
+                // Start the visual 60 seconds sync timer down to 0
+                let timeLeft = 59;
+                offlineTimerInterval = setInterval(() => {
+                    timeLeft--;
+                    const countdownEl = document.getElementById('offline-countdown');
+                    if (countdownEl) {
+                        countdownEl.innerText = `${timeLeft}s`;
+                    }
+                    if (timeLeft <= 0) {
+                        clearInterval(offlineTimerInterval);
+                    }
+                }, 1000);
             }
             else if (gameState.state === 'WILDCARD' || gameState.isWildcard || gameState.wildCardActive) {
                 if (gameState.currentPlayerId === IdentityManager.getClientId()) {
@@ -622,7 +668,6 @@
                         starCount = 2;
                     }
 
-                    // Build Icon structure (Stars stacked on Top of SVG)
                     innerHtml += `<div class="flex flex-col items-center justify-center w-full h-full pt-1 ${colorGroup}">
                                     ${getStarsSvg(starCount)}
                                     ${getRoleSvg(role)}
@@ -710,7 +755,6 @@
             updateGuide(`It is ${oppName}'s turn to roll. Stand by.`);
         }
 
-        // Replacing text `?` with Dice SVG Faces
         actionArea.innerHTML = `
             <h3 class="text-blue-400 font-semibold mb-1 text-sm uppercase tracking-wide">${isMyTurn ? "Your Turn" : "Enemy Turn"}</h3>
             <p class="text-[10px] text-zinc-500 mb-4 uppercase tracking-wider">Roll Phase</p>
@@ -768,7 +812,6 @@
         let rolls = 0;
 
         const interval = setInterval(() => {
-            // Animating with graphical dice
             d1.innerHTML = getDiceFaceSvg(faces[Math.floor(Math.random() * faces.length)]);
             d2.innerHTML = getDiceFaceSvg(faces[Math.floor(Math.random() * faces.length)]);
             rolls++;
@@ -1084,7 +1127,7 @@
         }
 
         const toast = document.createElement('div');
-        toast.className = `px-4 py-3 rounded-lg border text-xs font-mono flex items-start gap-3 transition-all duration-300 transform -translate-x-8 opacity-0 ${colorClass} max-w-sm backdrop-blur-md`;
+        toast.className = `px-4 py-3 rounded-lg border text-xs font-mono flex items-start gap-3 transition-all duration-300 transform -translate-y-4 opacity-0 ${colorClass} max-w-sm backdrop-blur-md`;
 
         toast.innerHTML = iconHtml;
         const textNode = document.createElement('span');
@@ -1094,7 +1137,7 @@
 
         container.prepend(toast);
 
-        requestAnimationFrame(() => toast.classList.remove('-translate-x-8', 'opacity-0'));
+        requestAnimationFrame(() => toast.classList.remove('-translate-y-4', 'opacity-0'));
 
         setTimeout(() => {
             toast.classList.add('opacity-0', 'translate-y-2');
@@ -1170,6 +1213,20 @@
 
         const winnerText = winnerName ? `Winner: ${winnerName}` : "Draw / Disconnected";
         document.getElementById('winner-text').innerText = winnerText;
+
+        // Fetch My Stats vs Opponent Stats
+        const myClientId = IdentityManager.getClientId();
+        const me = gameState.players.find(p => p.clientId === myClientId);
+        const opp = gameState.players.find(p => p.clientId !== myClientId);
+
+        if (me) {
+            document.getElementById('go-my-name').innerText = me.username;
+            document.getElementById('go-my-score').innerText = me.points;
+        }
+        if (opp) {
+            document.getElementById('go-opp-name').innerText = opp.username;
+            document.getElementById('go-opp-score').innerText = opp.points;
+        }
 
         IdentityManager.clearSession();
     }

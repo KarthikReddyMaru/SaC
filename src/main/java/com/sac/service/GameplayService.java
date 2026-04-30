@@ -57,6 +57,13 @@ public class GameplayService {
         GameState gameState = gameStateService.initializeGameState(roomId, gameMode, totalPlayers);
 
         if (gameStateService.exists(clientId, roomId)) {
+            if (roomConnectionService.exists(clientId)) {
+                roomConnectionService.addPlayerToRegistry(clientId, webSocketSession);
+                if (gameState.getGameplayStatus().equals(PLAYING)) {
+                    messageService.broadcastMessage(MessageFormat.gameState(gameState), roomId);
+                    return;
+                }
+            }
             if (!endTimer(clientId, roomId)) {
                 webSocketSession.close(CloseStatus.NOT_ACCEPTABLE);
                 return;
