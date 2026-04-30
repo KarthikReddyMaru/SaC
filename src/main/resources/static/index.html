@@ -606,8 +606,7 @@
                     renderActionUI(gameState.actionPendingOnActor);
                 } else {
                     resetActionArea(`Waiting for opponent to execute action...`);
-                    let actorStr = gameState.actionPendingOnActor ? ` using their ${gameState.actionPendingOnActor}` : "";
-                    const oppP = gameState.players.find(p => p.clientId === gameState.currentPlayerId);
+                    let actorStr = gameState.actionPendingOnActor ? ` using their ${gameState.actionPendingOnActor}` : " on an empty position";                    const oppP = gameState.players.find(p => p.clientId === gameState.currentPlayerId);
                     const oppName = oppP ? oppP.username : 'Opponent';
                     updateGuide(`Enemy cooking something: ${oppName} is executing a tactical action on Position ${gameState.actionPendingOn}${actorStr}. Stand by.`);
                 }
@@ -918,35 +917,46 @@
     function renderActionUI(actorType) {
         const actionArea = document.getElementById('dynamic-action-area');
 
+        // Handle null actor text safely
+        const displayText = actorType ? `${actorType} selected.` : 'Empty position selected.';
+
         let html = `
-            <h3 class="text-amber-400 font-semibold mb-2 text-sm uppercase tracking-wide">Tactical Action</h3>
-            <p class="text-[11px] text-zinc-400 mb-4">${actorType} selected.</p>
-            <div class="grid grid-cols-2 gap-3 w-full px-2">`;
+        <h3 class="text-amber-400 font-semibold mb-2 text-sm uppercase tracking-wide">Tactical Action</h3>
+        <p class="text-[11px] text-zinc-400 mb-4">${displayText}</p>
+        <div class="grid grid-cols-2 gap-3 w-full px-2">`;
 
         let isValidActor = false;
 
-        if (actorType === "RECRUIT") {
+        // NEW: Check for an empty position when an action is pending
+        if (!actorType && globalGameState && globalGameState.actionPendingOn) {
+            isValidActor = true;
+            updateGuide("Empty Position Selected: Spawn a new Recruit or Drop your turn.");
+            html += `
+            <button onclick="sendActionPayload('SPAWN', null, null, null, null, 'RECRUIT')" class="col-span-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Spawn</button>
+        `;
+        }
+        else if (actorType === "RECRUIT") {
             isValidActor = true;
             updateGuide("Recruit Selected: Promote, trigger a Revert, or Drop your turn! REVERT rewinds a selected position timeline. DROP skips your turn.");
             html += `
-                <button onclick="showPromoteOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Promote</button>
-                <button onclick="triggerRevertSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Revert</button>
-            `;
+            <button onclick="showPromoteOptions()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Promote</button>
+            <button onclick="triggerRevertSelection()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Revert</button>
+        `;
         }
         else if (actorType === "VETERAN") {
             isValidActor = true;
             updateGuide("Veteran Selected: Target an uncaptured enemy position to capture it, or Drop your turn. Successful captures grant an extra roll.");
             html += `
-                <button onclick="triggerCaptureSelection()" class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Capture</button>`;
+            <button onclick="triggerCaptureSelection()" class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">Capture</button>`;
         }
         else if (actorType === "PHANTOM") {
             isValidActor = true;
             updateGuide("Phantom Selected: Perform a BlackOut. Selecting an enemy position erases all matching enemy units type from their board.");
             html += `
-                <button onclick="triggerBlackOutSelection()" class="col-span-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">BlackOut</button>`;
+            <button onclick="triggerBlackOutSelection()" class="col-span-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] px-4 py-2.5 rounded-lg transition-colors shadow-sm w-full uppercase tracking-wider">BlackOut</button>`;
         }
         else {
-            updateGuide(`Tactical Action required for your ${actorType}. Choose your strategy carefully.`);
+            updateGuide(`Tactical Action required. Choose your strategy carefully.`);
             html += `<span class="col-span-2 text-zinc-500 text-xs">No actions available.</span>`;
         }
 
