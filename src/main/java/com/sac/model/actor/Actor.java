@@ -1,6 +1,7 @@
 package com.sac.model.actor;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.sac.model.GameMode;
 import com.sac.strategy.action.Action;
 import com.sac.strategy.action.GameAction;
 import lombok.Builder;
@@ -14,9 +15,9 @@ import java.util.Set;
 public abstract class Actor {
 
     @JsonIgnore
-    public abstract Set<Specialization> getAllowedTransitions();
+    public abstract Set<Specialization> getAllowedTransitions(GameMode gameMode);
     @JsonIgnore
-    public abstract Set<GameAction> getAllowedActions();
+    public abstract Set<GameAction> getAllowedActions(GameMode gameMode);
     public abstract Specialization getCurrentState();
     public abstract Actor copy();
 }

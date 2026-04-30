@@ -1,5 +1,6 @@
 package com.sac.config.actor;
 
+import com.sac.model.GameMode;
 import com.sac.model.actor.Specialization;
 
 import java.util.Collections;
@@ -7,36 +8,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static com.sac.model.GameMode.CLASSIC_POINTS;
+import static com.sac.model.actor.Specialization.*;
+
 public final class ActorEvolutionConfig {
 
-    private final static Map<Specialization, Set<Specialization>> evolutions = new HashMap<>();
+    private final static Map<GameMode, Map<Specialization, Set<Specialization>>> evolutions = new HashMap<>();
 
     static {
-        evolutions.put(Specialization.RECRUIT,
-                Set.of(Specialization.VETERAN, Specialization.PHANTOM));
-        evolutions.put(Specialization.VETERAN,
-                Collections.emptySet());
-        evolutions.put(Specialization.PHANTOM,
-                Collections.emptySet());
+        evolutions.put(CLASSIC_POINTS, Map.of(
+                RECRUIT, Set.of(VETERAN, PHANTOM),
+                VETERAN, Collections.emptySet(),
+                PHANTOM, Collections.emptySet()));
     }
 
-    public static Set<Specialization> getEvolutions(String fromSpecialization) {
-        Specialization specialization = Specialization.fromString(fromSpecialization);
-        return getEvolutions(specialization);
+    public static Set<Specialization> getEvolutions(Specialization fromSpecialization, GameMode gameMode) {
+        return evolutions.get(gameMode).getOrDefault(fromSpecialization, Collections.emptySet());
     }
 
-    public static Set<Specialization> getEvolutions(Specialization fromSpecialization) {
-        return evolutions.getOrDefault(fromSpecialization, Collections.emptySet());
+    public static boolean isActorPresentInMode(GameMode gameMode, Specialization specialization) {
+        return evolutions.get(gameMode).containsKey(specialization);
     }
 
-    public static boolean isEvolutionAllowed(String fromSpecialization, String toSpecialization) {
-        return isEvolutionAllowed(
-                Specialization.fromString(fromSpecialization),
-                Specialization.fromString(toSpecialization)
-        );
-    }
-
-    public static boolean isEvolutionAllowed(Specialization fromSpecialization, Specialization toSpecialization) {
-        return evolutions.getOrDefault(fromSpecialization, Collections.emptySet()).contains(toSpecialization);
-    }
 }
