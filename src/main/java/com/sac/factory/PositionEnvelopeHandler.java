@@ -44,7 +44,9 @@ public class PositionEnvelopeHandler implements EnvelopeHandler {
             GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
             Mode mode = gameModeHandlerRegistry.getInstance(gameMode);
             setSpanAttributes(Span.current(), positionContext);
-            mode.performChoose(webSocketSession, positionContext);
+            synchronized (gameStateService.getGameState(roomId)) {
+                mode.performChoose(webSocketSession, positionContext);
+            }
         } else
             messageService.sendRawPayload(webSocketSession, MessageFormat.systemError("Game not initialized yet"));
     }

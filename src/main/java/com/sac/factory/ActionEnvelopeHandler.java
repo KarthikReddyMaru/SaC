@@ -44,7 +44,9 @@ public class ActionEnvelopeHandler implements EnvelopeHandler {
             GameMode gameMode = GameMode.fromString(SocketSessionUtil.getGameMode(webSocketSession));
             Mode mode = gameModeHandlerRegistry.getInstance(gameMode);
             setSpanAttributes(Span.current(), actionContext);
-            mode.performAction(webSocketSession, actionContext, roomId);
+            synchronized (gameStateService.getGameState(roomId)) {
+                mode.performAction(webSocketSession, actionContext, roomId);
+            }
         } else
             messageService.sendRawPayload(webSocketSession, MessageFormat.systemError("Game not initialized yet"));
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sac.model.message.ServerResponse;
 import com.sac.util.SocketSessionUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -11,6 +12,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageService {
@@ -25,7 +27,7 @@ public class MessageService {
                 try {
                     session.sendMessage(new TextMessage(message));
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    log.warn("Exception occurred while broadcasting: {}", e.getMessage());
                 }
             }
         }
